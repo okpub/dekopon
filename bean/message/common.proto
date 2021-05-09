@@ -1,0 +1,76 @@
+syntax = "proto3";
+ 
+option go_package="/common";
+
+//消息头
+message MessageHeader {
+    int32 cmd = 1;
+	//服务器id(==0表示随机 >0优先messageType)
+	int32 serverId = 2;
+	//消息类型/服务器类型
+	int32 messageType = 3;
+	//游戏版本
+    int32 version = 4;
+	//子版本
+	int32 subVersion = 5;
+	//数据格式
+	int32 format = 6;
+	//编码id,用于验证
+	int32 signCode = 7;	
+}
+
+//用户会话头
+message SessionHeader{
+	//登陆用户id(交互必须携带)
+	int32 userID = 1;
+	//登陆网关
+	int32 gate = 2;
+	//网关socket
+	int32 fid = 3;
+	//时间戳
+	int64 unix = 4;
+}
+
+//用户会话
+message Session{
+	SessionHeader header = 1;
+	//携带用户参数
+	map<string, string> metaData = 2;
+}
+
+//用户消息(可以用户自定义)
+message UserMessage{
+	//可以通过普通消息直接赋值过来
+	MessageHeader header = 1;
+	//用户信息
+	Session session = 2;
+	//用户消息
+	bytes body = 3;
+}
+
+// 普通消息(需要用户自定义)
+message CustomMessage{
+	//普通消息头
+	MessageHeader header = 1;
+	//普通消息
+	bytes body = 2;
+}
+
+
+// 同步请求
+
+//请求
+message Request{
+	string id = 1;
+	string ServerName = 2;
+	string MethodName = 3;
+	map<string, string> metadata = 4;
+	bytes body = 5;
+}
+
+//回执
+message Response{
+	int32 errCode = 1;
+    string errMsg = 2;
+	bytes body = 3;
+}

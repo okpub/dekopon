@@ -1,0 +1,78 @@
+package network
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"time"
+
+	"github.com/skimmer/actor"
+	"github.com/skimmer/mailbox"
+)
+
+type TcpServer struct {
+	actor.TaskDone
+	ServerOptions
+}
+
+/*
+ * 1 这里之所以新建一context是因为服务器退出，他所有依赖的子context退出
+ * 2 如果服务器退出，并不意味此服务关闭，可以循环调用来重启
+ */
+func (svr *TcpServer) ListenAndServe(ctx context.Context, handler Handler) (err error) {
+	var (
+		ln net.Listener
+	)
+
+	if ln, err = net.Listen(TCP, svr.Addr); mailbox.Fail(err) {
+		fmt.Println("Fail: close tcp server#", err)
+		return
+	}
+
+	var (
+		wg            actor.WaitGroup
+		conns         ConnSet
+		child, cancel = context.WithCancel(ctx)
+		handlerConn   = func(conn net.Conn) func() {
+			return func() {
+				handler(child, conn)
+				conns.RemoveConn(conn)
+			}
+		}
+	)
+
+	go func() {
+		defer ln.Close()
+		select {
+		case <-svr.Done():
+		case <-child.Done():
+		}
+	}()
+
+	func() {
+		var conn net.Conn
+		defer cancel()
+		defer conns.CloseAll()
+		for {
+			if conn, err = ln.Accept(); err == nil {
+				if conns.SetConnMax(conn, svr.MaxConn) {
+					wg.Wrap(handlerConn(conn))
+				} else {
+					conn.Close()
+					fmt.Println("WARNING: max full conn")
+				}
+			} else {
+				if Temporary(err) {
+					time.Sleep(TemporaryInterval)
+				} else {
+					break
+				}
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	fmt.Println("EXIT: close tcp server#", err)
+	return
+}

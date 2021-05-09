@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+//中心服务器消息
+option go_package="/club";
+
+//info
+message Node {
+	//服务器id（唯一）
+    int32 serverId = 1;
+	//服务器类型(login/world/game/gate)
+	int32 messageType = 2;
+	//服务器名称
+	string serverName = 3;
+	//端口（用于服务器打开）
+	int32 port = 4;
+	//地址（用户客户端链接）
+    string addr = 5;
+	//权重（值越大负重越大）
+	int32 weight = 6;
+}
+
+//0x2001
+message AddNodeReq{
+	Node server = 1;
+}
+
+message AddNodeResp{
+	repeated Node serverList = 1;
+}
+
+//0x2002
+message UpdateNodeReq{
+	int32 serverId = 1;
+	int32 weight = 2;
+}
+
+message UpdateNodeResp{
+	//no message
+}
+
+//0x2003
+message  RemoveNodeReq{
+	int32 serverId = 1;
+}
+
+message RemoveNodeResp{
+	//no message
+}
+
+
+//=========bus message
+message AddNodeBus{
+	Node server = 1;
+}
+
+message UpdateNodeBus{
+	int32 serverId = 1;
+	int32 weight = 2;
+}
+
+message RemoveNodeBus{
+	int32 serverId = 1;
+}

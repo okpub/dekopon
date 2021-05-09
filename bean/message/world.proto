@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+//sys世界服务器
+option go_package="/world";
+
+//sys
+message AddUserReq{
+    int32 userID = 1;
+    string token = 2;
+}
+
+message AddUserResp{
+    int32 errCode = 1;
+}
+
+message RemoveUserReq{
+    int32 userID = 1;
+    string token = 2;
+}
+
+message RemoveUserResp{
+    int32 errCode = 1;
+}
+
+//强制踢出用户
+message KickUserReq{
+    //踢出的用户
+    int32 userID = 1;
+    //踢出原因
+    int32 kickCode = 2;
+}
+
+message KickUserResp{
+    int32 errCode = 1; //0表示成功
+}
+
+//通知某人
+message SendUserReq{
+    //通知对方
+    int32 userID = 1;
+    //发送类型
+    int32 messageType = 2;
+    //发送内容
+    string text = 3;
+}
+
+message SendUserResp{
+    int32 errCode = 1;
+}
+
+//通知所有人(活动或者推送信息)
+message BroadcastWorldReq{
+    //发送类型
+    int32 messageType = 1;
+    //发送内容
+    string text = 2;
+}
+
+message BroadcastWorldResp{
+    int32 errCode = 1;
+}
