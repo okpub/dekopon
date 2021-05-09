@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/skimmer/actor"
+	"github.com/okpub/dekopon/actor"
 )
 
 //extends ActorContext

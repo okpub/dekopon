@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"github.com/skimmer/bean/message/common"
+	"github.com/okpub/dekopon/bean/message/common"
 )
 
 //应答服务器

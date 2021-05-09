@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/skimmer/conn/codec"
+	"github.com/okpub/dekopon/conn/codec"
 )
 
 const (

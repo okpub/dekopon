@@ -3,7 +3,7 @@ package network
 import (
 	"fmt"
 
-	"github.com/skimmer/actor"
+	"github.com/okpub/dekopon/actor"
 )
 
 const (
