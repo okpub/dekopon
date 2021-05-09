@@ -8,7 +8,6 @@ import (
 
 	"github.com/okpub/dekopon/actor"
 	"github.com/okpub/dekopon/bean/message/rpc"
-	"github.com/okpub/dekopon/conn/codec"
 	"github.com/okpub/dekopon/conn/message"
 	"github.com/okpub/dekopon/conn/packet"
 	"github.com/okpub/dekopon/mailbox"
@@ -92,7 +91,7 @@ func (client *Client) ListenAndRead(conn net.Conn) (err error) {
 		packets []*packet.Packet
 	)
 	for {
-		if packets, err = client.readPackets(buf, conn); err == nil {
+		if packets, err = network.ReadPackets(buf, conn, client.Decoder); err == nil {
 			for _, message := range packets {
 				client.packetChan <- message
 			}
@@ -100,29 +99,6 @@ func (client *Client) ListenAndRead(conn net.Conn) (err error) {
 			//忽略临时报错, 直接关闭
 			break
 		}
-	}
-	return
-}
-
-func (client *Client) readPackets(buf *bytes.Buffer, conn net.Conn) (packets []*packet.Packet, err error) {
-	var (
-		n              int
-		totalProcessed int
-		body           [network.ReadBuffSize]byte
-	)
-
-	if n, err = conn.Read(body[0:]); n > 0 {
-		buf.Write(body[:n])
-	}
-
-	if err == nil {
-		packets, err = client.Decoder.Decode(buf.Bytes())
-		for _, message := range packets {
-			totalProcessed += codec.HeadSize + message.Len()
-		}
-		buf.Next(totalProcessed)
-	} else {
-		fmt.Println(err.Error())
 	}
 	return
 }

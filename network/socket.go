@@ -60,7 +60,6 @@ func (socket *Socket) Start(ctx context.Context) error {
 		err = socket.run(ctx, conn)
 	} else {
 		socket.InvokeSystemMessage(&DialError{Err: err})
-		//close buffer
 		socket.Close()
 	}
 	return err
@@ -103,7 +102,7 @@ func (socket *Socket) ListenAndRead(conn net.Conn) (err error) {
 	)
 	defer sendCh.Close()
 	for {
-		if packets, err = socket.readPackets(buf, conn); err == nil {
+		if packets, err = ReadPackets(buf, conn, socket.Decoder); err == nil {
 			for _, message := range packets {
 				socket.InvokeUserMessage(message)
 			}
@@ -119,7 +118,7 @@ func (socket *Socket) ListenAndRead(conn net.Conn) (err error) {
 	return
 }
 
-func (socket *Socket) readPackets(buf *bytes.Buffer, conn net.Conn) (packets []*packet.Packet, err error) {
+func ReadPackets(buf *bytes.Buffer, conn net.Conn, decoder codec.PacketDecoder) (packets []*packet.Packet, err error) {
 	var (
 		n              int
 		totalProcessed int
@@ -131,7 +130,7 @@ func (socket *Socket) readPackets(buf *bytes.Buffer, conn net.Conn) (packets []*
 	}
 
 	if err == nil {
-		packets, err = socket.Decoder.Decode(buf.Bytes())
+		packets, err = decoder.Decode(buf.Bytes())
 		for _, message := range packets {
 			totalProcessed += codec.HeadSize + message.Len()
 		}
