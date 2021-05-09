@@ -57,6 +57,10 @@ func (props *Props) NewMailbox() mailbox.Mailbox {
 	return props.mailboxProducer()
 }
 
+func (props Props) Options() Props {
+	return props
+}
+
 //context apply
 func (props *Props) spawn(parent SpawnContext, options *PIDOptions) (pid PID) {
 	if chain := props.spawnMiddlewareChain; chain != nil {

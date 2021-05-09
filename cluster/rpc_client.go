@@ -15,7 +15,7 @@ import (
 	"github.com/okpub/dekopon/network"
 )
 
-//应答客户端
+//同步应答客户端
 type Client struct {
 	*network.SocketOptions
 	mailbox.TaskBuffer
@@ -26,7 +26,7 @@ func NewClient(args ...network.SocketOption) *Client {
 	var options = network.NewOptions()
 	return &Client{
 		SocketOptions: options.Filler(args),
-		TaskBuffer:    mailbox.MakeBuffer(options.PendingNum),
+		TaskBuffer:    options.NewChannel(),
 		packetChan:    make(chan *packet.Packet)}
 }
 
@@ -44,13 +44,14 @@ func (client *Client) Serve(parent context.Context) {
 	if err == nil {
 		go client.ListenAndWrite(ctx, conn)
 
-		client.ListenAndRead(ctx, conn)
+		client.ListenAndRead(conn)
 	}
 }
 
 func (client *Client) ListenAndWrite(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
-	for message := range client.TaskBuffer {
+	var sendCh = client.TaskBuffer
+	for message := range sendCh {
 		switch event := message.(type) {
 		case actor.Request:
 			client.processRequest(ctx, conn, event)
@@ -85,7 +86,7 @@ func (client *Client) Request(ctx context.Context, req *rpc.Request) (res *rpc.R
 /*
 * 监听读取
  */
-func (client *Client) ListenAndRead(ctx context.Context, conn net.Conn) (err error) {
+func (client *Client) ListenAndRead(conn net.Conn) (err error) {
 	var (
 		buf     = bytes.NewBuffer(nil)
 		packets []*packet.Packet
@@ -93,12 +94,7 @@ func (client *Client) ListenAndRead(ctx context.Context, conn net.Conn) (err err
 	for {
 		if packets, err = client.readPackets(buf, conn); err == nil {
 			for _, message := range packets {
-				select {
-				case <-ctx.Done():
-					//cancel message
-				case client.packetChan <- message:
-					//read packet
-				}
+				client.packetChan <- message
 			}
 		} else {
 			//忽略临时报错, 直接关闭

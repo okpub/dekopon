@@ -18,18 +18,14 @@ import (
 type Socket struct {
 	mailbox.TaskBuffer
 	mailbox.InvokerMessage
-	SocketOptions
-
-	packetChan mailbox.TaskBuffer
+	*SocketOptions
 }
 
 func NewSocket(args ...SocketOption) *Socket {
 	var options = NewOptions()
-	options.Filler(args)
 	return &Socket{
-		SocketOptions: options,
-		TaskBuffer:    mailbox.MakeBuffer(options.PendingNum),
-		packetChan:    mailbox.MakeBlock(),
+		SocketOptions: options.Filler(args),
+		TaskBuffer:    options.NewChannel(),
 	}
 }
 
@@ -43,8 +39,19 @@ func (socket *Socket) RegisterHander(invoker mailbox.InvokerMessage) {
 	socket.InvokerMessage = invoker
 }
 
-//代替Start
-func (socket *Socket) Serve(ctx context.Context, conn net.Conn, err error) error {
+//不需要连接
+func (socket *Socket) ServeConn(ctx context.Context, conn net.Conn) (err error) {
+	defer socket.InvokeSystemMessage(actor.EVENT_STOP)
+	defer socket.InvokeSystemMessage(EVENT_CLOSED)
+
+	socket.InvokeSystemMessage(actor.EVENT_START)
+	err = socket.run(ctx, conn)
+	return
+}
+
+//override public
+func (socket *Socket) Start(ctx context.Context) error {
+	var conn, err = socket.Connect()
 	defer socket.InvokeSystemMessage(actor.EVENT_STOP)
 	defer socket.InvokeSystemMessage(EVENT_CLOSED)
 
@@ -59,24 +66,12 @@ func (socket *Socket) Serve(ctx context.Context, conn net.Conn, err error) error
 	return err
 }
 
-//override public
-func (socket *Socket) Start(ctx context.Context) error {
-	panic(fmt.Errorf("please apply Serve with Error"))
-}
-
 func (socket *Socket) run(ctx context.Context, conn net.Conn) (err error) {
 	socket.InvokeSystemMessage(EVENT_OPEN)
 	//异步写入
 	go socket.ListenAndWrite(conn)
 	//同步读取
-	go func() {
-		defer socket.packetChan.Close()
-		socket.ListenAndRead(conn)
-	}()
-
-	for data := range socket.packetChan {
-		socket.InvokeUserMessage(data)
-	}
+	socket.ListenAndRead(conn)
 	return
 }
 
@@ -110,13 +105,11 @@ func (socket *Socket) ListenAndRead(conn net.Conn) (err error) {
 	for {
 		if packets, err = socket.readPackets(buf, conn); err == nil {
 			for _, message := range packets {
-				//socket.InvokeUserMessage(message)
-				socket.packetChan <- message
+				socket.InvokeUserMessage(message)
 			}
 		} else {
 			if Temporary(err) {
-				socket.packetChan <- &TempErr{Err: err}
-				//socket.InvokeSystemMessage(&TempErr{Err: err})
+				socket.InvokeSystemMessage(&TempErr{Err: err})
 			} else {
 				break
 			}

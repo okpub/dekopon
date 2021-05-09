@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/okpub/dekopon/conn/codec"
+	"github.com/okpub/dekopon/mailbox"
 )
 
 const (
@@ -76,6 +77,10 @@ func (options *SocketOptions) WithAddr(addr string) *SocketOptions {
 func (options *SocketOptions) WithNetwork(kind string) *SocketOptions {
 	options.Network = kind
 	return options
+}
+
+func (options *SocketOptions) NewChannel() mailbox.TaskBuffer {
+	return mailbox.MakeBuffer(options.PendingNum)
 }
 
 func (options SocketOptions) Options() SocketOptions {

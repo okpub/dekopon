@@ -65,7 +65,7 @@ func (s *NatsRPCServer) handleConn(server context.Context, conn net.Conn) {
 	})
 
 	socket.RegisterHander(actor.NewSelf(pid, props))
-	socket.Serve(server, conn, nil)
+	socket.ServeConn(server, conn)
 }
 
 func (s *NatsRPCServer) Disconnect() {

@@ -13,6 +13,10 @@ type SocketContext struct {
 	conn net.Conn
 }
 
+func NewContext(ctx actor.ActorContext, conn net.Conn) actor.ActorContext {
+	return &SocketContext{ActorContext: ctx, conn: conn}
+}
+
 func (ctx *SocketContext) Sender() actor.PID {
 	return ctx.Self()
 }

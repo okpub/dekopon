@@ -53,11 +53,15 @@ type (
 
 //part
 type (
+	NodePart interface {
+		ChildOf(PID) infoPart
+	}
+
 	infoPart interface {
+		NodePart
 		Self() PID
 		Parent() PID
 		System() ActorSystem
-		ChildOf(PID) infoPart
 	}
 
 	spawnPart interface {

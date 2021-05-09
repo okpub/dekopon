@@ -15,7 +15,7 @@ import (
 
 var wgRoot actor.WaitGroup
 
-func handlerConn(handler actor.PID) Handler {
+func handlerConn(parent actor.NodePart, handler actor.PID) Handler {
 	return func(server context.Context, conn net.Conn) {
 		var (
 			socket = WithSocket(conn)
@@ -43,44 +43,30 @@ func handlerConn(handler actor.PID) Handler {
 			}
 		})
 
-		var ctx = actor.NewContext(stage.ChildOf(pid), props)
+		var ctx = actor.NewContext(parent.ChildOf(pid), props)
 
 		socket.RegisterHander(ctx)
-
-		socket.Serve(server, conn, nil)
-
+		socket.ServeConn(server, conn)
 	}
 }
 
-func dial_client(addr, kind string) {
+func dial_client(parent actor.SpawnContext, addr, kind string) {
 	var (
-		socket = NewSocket(SetDialAddr(addr), SetDialNetwork(kind))
-		pid    = actor.NewPID(context.Background(), actor.NewProcess(socket), actor.SetAddr(socket.Addr))
+		p = FromDial(SetDialAddr(addr), SetDialNetwork(kind))
 	)
-	fmt.Println("建立socket:", pid)
-	go func() {
-		//1 先连接
-		var conn, err = socket.Connect()
 
-		//2 连接后建立context(无论连接是否成功，都建立)
-		var props = From(conn, func(ctx actor.ActorContext) {
-			switch event := ctx.Message().(type) {
-			case *packet.Packet:
-				var msg = message.UnPack(event)
-				fmt.Println("客户端收到消息:", msg.Header)
-			case *DialError:
-			case *EventOpen:
-			case *EventClose:
-			}
-		})
+	p.WithFunc(func(ctx actor.ActorContext) {
+		switch event := ctx.Message().(type) {
+		case *packet.Packet:
+			var msg = message.UnPack(event)
+			fmt.Println("客户端收到消息:", msg.Header)
+		case *DialError:
+		case *EventOpen:
+		case *EventClose:
+		}
+	})
 
-		//3 包装成context
-		var ctx = actor.NewContext(stage.ChildOf(pid), props)
-
-		socket.RegisterHander(ctx)
-		socket.Serve(context.Background(), conn, err)
-	}()
-
+	var pid = parent.ActorOf(p)
 	if kind == TCP {
 		var data = message.Pack(101, message.SetMessageType(102), message.SetMessageData(&login.LoginReq{Pwd: "密码"}))
 		pid.Send(data)
@@ -89,11 +75,10 @@ func dial_client(addr, kind string) {
 
 var (
 	router = map[int]actor.PID{}
-	stage  = actor.NewSystem()
 )
 
-func register_serve(id int, name string) {
-	router[id] = stage.ActorOf(actor.From(func(ctx actor.ActorContext) {
+func register_serve(parent actor.SpawnContext, id int, name string) {
+	router[id] = parent.ActorOf(actor.From(func(ctx actor.ActorContext) {
 		switch event := ctx.Message().(type) {
 		case *actor.Started:
 		case *actor.Stopped:
@@ -110,31 +95,28 @@ func register_serve(id int, name string) {
 
 func TestInit(t *testing.T) {
 	var (
-		ctx, _ = context.WithTimeout(context.Background(), time.Second*3)
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*3)
+		stage       = actor.WithSystem(ctx)
 	)
+	defer cancel()
 
-	go func() {
-		actor.Wait(ctx)
-		stage.Shutdown()
-	}()
-
-	register_serve(1, "大厅")
-	register_serve(2, "房间")
-	register_serve(3, "登陆")
+	register_serve(stage, 1, "大厅")
+	register_serve(stage, 2, "房间")
+	register_serve(stage, 3, "登陆")
 
 	var tcpServer = NewServer(SetAddr(":9003"))
 	wgRoot.Wrap(func() {
-		tcpServer.ListenAndServe(ctx, handlerConn(router[3]))
+		tcpServer.ListenAndServe(ctx, handlerConn(stage, router[3]))
 	})
 	time.Sleep(time.Millisecond * 10)
-	dial_client("localhost:9003", TCP)
+	dial_client(stage, "localhost:9003", TCP)
 
 	var clientServer = NewServer(SetAddr(":9001"), SetNetwork(WEB))
 	wgRoot.Wrap(func() {
-		clientServer.ListenAndServe(ctx, handlerConn(router[3]))
+		clientServer.ListenAndServe(ctx, handlerConn(stage, router[3]))
 	})
 	time.Sleep(time.Millisecond * 10)
-	dial_client("localhost:9001", WEB)
+	dial_client(stage, "localhost:9001", WEB)
 	wgRoot.Wait()
 
 	stage.Wait()

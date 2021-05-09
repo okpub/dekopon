@@ -1,5 +1,5 @@
 package cluster
 
 //订阅客户端
-type NatsRPCClient struct {
+type NatClient struct {
 }

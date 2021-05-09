@@ -53,7 +53,7 @@ func (s *RPCServer) handleConn(server context.Context, conn net.Conn) {
 	})
 
 	socket.RegisterHander(actor.NewSelf(pid, props))
-	socket.Serve(server, conn, nil)
+	socket.ServeConn(server, conn)
 }
 
 //通过serverName获取不同通道的pid,将多个或者一个功能集合
