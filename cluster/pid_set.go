@@ -1,6 +1,6 @@
 package cluster
 
-import "github.com/skimmer/actor"
+import "github.com/okpub/dekopon/actor"
 
 type PIDSet map[string]actor.PID
 

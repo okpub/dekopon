@@ -3,7 +3,7 @@ package cluster
 import (
 	"reflect"
 
-	"github.com/skimmer/bean/message/rpc"
+	"github.com/okpub/dekopon/bean/message/rpc"
 )
 
 func ValueOf(values []reflect.Value, fail error) (res *rpc.Response, err error) {

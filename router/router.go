@@ -1,8 +1,8 @@
 package router
 
 import (
-	"github.com/skimmer/actor"
-	"github.com/skimmer/bean/message/club"
+	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/bean/message/club"
 )
 
 //路由规则

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/skimmer/utils"
+	"github.com/okpub/dekopon/utils"
 )
 
 func NewRequest(request interface{}) *mailboxRequest {

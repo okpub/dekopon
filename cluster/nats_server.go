@@ -4,11 +4,11 @@ import (
 	"context"
 	"net"
 
-	"github.com/skimmer/actor"
-	"github.com/skimmer/conn/message"
-	"github.com/skimmer/conn/packet"
-	"github.com/skimmer/network"
-	"github.com/skimmer/router"
+	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/conn/message"
+	"github.com/okpub/dekopon/conn/packet"
+	"github.com/okpub/dekopon/network"
+	"github.com/okpub/dekopon/router"
 )
 
 //订阅服务
@@ -70,24 +70,4 @@ func (s *NatsRPCServer) handleConn(server context.Context, conn net.Conn) {
 
 func (s *NatsRPCServer) Disconnect() {
 	s.Server.Close()
-}
-
-//订阅
-func (this *NatsRPCServer) Subscribe() {
-
-}
-
-//开启服务器
-func (this *NatsRPCServer) Start() {
-
-}
-
-//断开服务器
-func (this *NatsRPCServer) Disconnect() {
-
-}
-
-//推送消息(通过服务器id内部建立连接)
-func (this *NatsRPCServer) PublishMessage() {
-
 }

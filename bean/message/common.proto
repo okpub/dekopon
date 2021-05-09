@@ -55,22 +55,3 @@ message CustomMessage{
 	//普通消息
 	bytes body = 2;
 }
-
-
-// 同步请求
-
-//请求
-message Request{
-	string id = 1;
-	string ServerName = 2;
-	string MethodName = 3;
-	map<string, string> metadata = 4;
-	bytes body = 5;
-}
-
-//回执
-message Response{
-	int32 errCode = 1;
-    string errMsg = 2;
-	bytes body = 3;
-}

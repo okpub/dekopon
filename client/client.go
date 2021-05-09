@@ -5,13 +5,13 @@ import (
 	"context"
 	"net"
 
-	"github.com/skimmer/actor"
-	"github.com/skimmer/bean/message/common"
-	"github.com/skimmer/conn/codec"
-	"github.com/skimmer/conn/packet"
-	"github.com/skimmer/mailbox"
-	"github.com/skimmer/network"
-	"github.com/skimmer/utils"
+	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/bean/message/common"
+	"github.com/okpub/dekopon/conn/codec"
+	"github.com/okpub/dekopon/conn/packet"
+	"github.com/okpub/dekopon/mailbox"
+	"github.com/okpub/dekopon/network"
+	"github.com/okpub/dekopon/utils"
 )
 
 type Client struct {

@@ -3,7 +3,7 @@ package actor
 import (
 	"context"
 
-	"github.com/skimmer/mailbox"
+	"github.com/okpub/dekopon/mailbox"
 )
 
 /*

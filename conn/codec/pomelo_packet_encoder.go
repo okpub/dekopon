@@ -3,7 +3,7 @@ package codec
 import (
 	"fmt"
 
-	"github.com/skimmer/conn/packet"
+	"github.com/okpub/dekopon/conn/packet"
 	"google.golang.org/protobuf/proto"
 )
 

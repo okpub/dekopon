@@ -3,7 +3,7 @@ package codec
 import (
 	"errors"
 
-	"github.com/skimmer/conn/packet"
+	"github.com/okpub/dekopon/conn/packet"
 )
 
 // Codec constants.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/skimmer/mailbox"
+	"github.com/okpub/dekopon/mailbox"
 )
 
 /*

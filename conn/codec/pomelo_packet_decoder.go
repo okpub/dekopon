@@ -3,7 +3,7 @@ package codec
 import (
 	"bytes"
 
-	"github.com/skimmer/conn/packet"
+	"github.com/okpub/dekopon/conn/packet"
 )
 
 type PomeloPacketDecoder struct{}

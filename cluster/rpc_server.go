@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/skimmer/actor"
-	"github.com/skimmer/bean/message/rpc"
-	"github.com/skimmer/conn/message"
-	"github.com/skimmer/conn/packet"
-	"github.com/skimmer/network"
+	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/bean/message/rpc"
+	"github.com/okpub/dekopon/conn/message"
+	"github.com/okpub/dekopon/conn/packet"
+	"github.com/okpub/dekopon/network"
 )
 
 //应答服务器

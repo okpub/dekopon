@@ -1,8 +1,8 @@
 package message
 
 import (
-	"github.com/skimmer/bean/message/common"
-	"github.com/skimmer/conn/packet"
+	"github.com/okpub/dekopon/bean/message/common"
+	"github.com/okpub/dekopon/conn/packet"
 	"google.golang.org/protobuf/proto"
 )
 

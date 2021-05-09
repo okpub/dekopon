@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/skimmer/actor"
-	"github.com/skimmer/bean/message/rpc"
-	"github.com/skimmer/network"
-	"github.com/skimmer/observer"
+	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/bean/message/rpc"
+	"github.com/okpub/dekopon/network"
+	"github.com/okpub/dekopon/observer"
 )
 
 //最终处理

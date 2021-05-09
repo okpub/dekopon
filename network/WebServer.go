@@ -6,7 +6,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/skimmer/actor"
+	"github.com/okpub/dekopon/actor"
 	"golang.org/x/net/websocket"
 )
 

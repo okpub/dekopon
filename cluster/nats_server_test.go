@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/skimmer/actor"
-	"github.com/skimmer/bean/cmd"
-	"github.com/skimmer/bean/message/common"
-	"github.com/skimmer/bean/message/login"
-	"github.com/skimmer/conn/message"
-	"github.com/skimmer/conn/packet"
-	"github.com/skimmer/network"
+	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/bean/cmd"
+	"github.com/okpub/dekopon/bean/message/common"
+	"github.com/okpub/dekopon/bean/message/login"
+	"github.com/okpub/dekopon/conn/message"
+	"github.com/okpub/dekopon/conn/packet"
+	"github.com/okpub/dekopon/network"
 )
 
 func test_client(uid int32) {
@@ -70,7 +70,7 @@ func (*TestActor) start(ctx actor.ActorContext) {
 	svr.Start(ctx.Background())
 }
 
-func TestInit(t *testing.T) {
+func TestInit2(t *testing.T) {
 	var root, _ = context.WithTimeout(context.Background(), time.Second*3)
 	var stage = actor.WithSystem(root)
 
