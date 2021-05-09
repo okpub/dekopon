@@ -4,13 +4,17 @@ import (
 	"net"
 	"time"
 
-	"github.com/okpub/dekopon/actor"
+	"github.com/skimmer/actor"
 )
 
 //extends ActorContext
 type SocketContext struct {
 	actor.ActorContext
 	conn net.Conn
+}
+
+func (ctx *SocketContext) Sender() actor.PID {
+	return ctx.Self()
 }
 
 func (ctx *SocketContext) SetReceiveTimeout(dur time.Duration) {

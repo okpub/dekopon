@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/okpub/dekopon/bean/message/common"
+	"github.com/skimmer/bean/message/common"
 )
 
 func TestInit(t *testing.T) {

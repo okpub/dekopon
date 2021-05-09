@@ -6,13 +6,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/okpub/dekopon/actor"
-	"github.com/okpub/dekopon/mailbox"
+	"github.com/skimmer/actor"
+	"github.com/skimmer/mailbox"
 )
 
 type TcpServer struct {
 	actor.TaskDone
-	ServerOptions
+	*ServerOptions
 }
 
 /*

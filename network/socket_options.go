@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/okpub/dekopon/conn/codec"
+	"github.com/skimmer/conn/codec"
 )
 
 const (
@@ -23,8 +23,10 @@ var (
 	}
 )
 
-func NewOptions() SocketOptions {
-	return defaultSocketOptions
+func NewOptions(args ...SocketOption) SocketOptions {
+	var options = defaultSocketOptions
+	options.Filler(args)
+	return options
 }
 
 type SocketOptions struct {
@@ -42,14 +44,16 @@ type SocketOptions struct {
 	Decoder codec.PacketDecoder
 }
 
-func (options *SocketOptions) Filler(args []SocketOption) {
+func (options *SocketOptions) Filler(args []SocketOption) *SocketOptions {
 	for _, f := range args {
 		f(options)
 	}
+	return options
 }
 
-func (options *SocketOptions) SetArgs(args ...SocketOption) {
+func (options *SocketOptions) SetArgs(args ...SocketOption) *SocketOptions {
 	options.Filler(args)
+	return options
 }
 
 func (options *SocketOptions) Connect() (conn net.Conn, err error) {
@@ -80,3 +84,15 @@ func (options SocketOptions) Options() SocketOptions {
 
 //socket可选参数
 type SocketOption func(*SocketOptions)
+
+func SetDialAddr(addr string) SocketOption {
+	return func(p *SocketOptions) {
+		p.Addr = addr
+	}
+}
+
+func SetDialNetwork(addr string) SocketOption {
+	return func(p *SocketOptions) {
+		p.Network = addr
+	}
+}

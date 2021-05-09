@@ -3,7 +3,7 @@ package actor
 import (
 	"context"
 
-	"github.com/okpub/dekopon/mailbox"
+	"github.com/skimmer/mailbox"
 )
 
 const defaultPendingNum = 20

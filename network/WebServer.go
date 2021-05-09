@@ -6,13 +6,13 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/okpub/dekopon/actor"
+	"github.com/skimmer/actor"
 	"golang.org/x/net/websocket"
 )
 
 type WebServer struct {
 	actor.TaskDone
-	ServerOptions
+	*ServerOptions
 }
 
 func (svr *WebServer) ListenAndServe(ctx context.Context, handler Handler) (err error) {

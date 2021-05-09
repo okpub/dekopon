@@ -20,6 +20,10 @@ func MakeBuffer(size int) TaskBuffer {
 	return make(TaskBuffer, size)
 }
 
+func MakeBlock() TaskBuffer {
+	return make(TaskBuffer)
+}
+
 func MakeTest() TaskBuffer {
 	return make(TaskBuffer, DefaultPendingNum)
 }

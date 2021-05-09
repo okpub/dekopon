@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okpub/dekopon/actor"
-	"github.com/okpub/dekopon/bean/message/login"
-	"github.com/okpub/dekopon/conn/message"
-	"github.com/okpub/dekopon/conn/packet"
+	"github.com/skimmer/actor"
+	"github.com/skimmer/bean/message/login"
+	"github.com/skimmer/conn/message"
+	"github.com/skimmer/conn/packet"
 )
 
 var wgRoot actor.WaitGroup
@@ -18,9 +18,8 @@ var wgRoot actor.WaitGroup
 func handlerConn(handler actor.PID) Handler {
 	return func(server context.Context, conn net.Conn) {
 		var (
-			options = NewOptions()
-			socket  = WithSocket(options, conn)
-			pid     = actor.NewPID(server, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
+			socket = WithSocket(conn)
+			pid    = actor.NewPID(server, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
 		)
 		var ping = false
 		var props = From(conn, func(ctx actor.ActorContext) {
@@ -54,11 +53,8 @@ func handlerConn(handler actor.PID) Handler {
 }
 
 func dial_client(addr, kind string) {
-	var options = NewOptions()
-	options.WithAddr(addr).WithNetwork(kind)
-
 	var (
-		socket = NewSocket(options) //不能对外公开
+		socket = NewSocket(SetDialAddr(addr), SetDialNetwork(kind))
 		pid    = actor.NewPID(context.Background(), actor.NewProcess(socket), actor.SetAddr(socket.Addr))
 	)
 	fmt.Println("建立socket:", pid)
@@ -73,11 +69,8 @@ func dial_client(addr, kind string) {
 				var msg = message.UnPack(event)
 				fmt.Println("客户端收到消息:", msg.Header)
 			case *DialError:
-
 			case *EventOpen:
-
 			case *EventClose:
-
 			}
 		})
 
@@ -89,7 +82,7 @@ func dial_client(addr, kind string) {
 	}()
 
 	if kind == TCP {
-		var data = message.Pack(101, message.SetType(102), message.SetMessage(&login.LoginReq{Pwd: "密码"}))
+		var data = message.Pack(101, message.SetMessageType(102), message.SetMessageData(&login.LoginReq{Pwd: "密码"}))
 		pid.Send(data)
 	}
 }
