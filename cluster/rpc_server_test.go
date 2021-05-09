@@ -56,11 +56,11 @@ func (a *TestCallActor) processRequest(ctx actor.ActorContext, event actor.Reque
 
 func rpc_client() {
 	var client = NewClient(network.SetDialAddr("localhost:9098"))
-	client.Start(context.Background())
+	client.Start()
 
 	for i := 0; i < 10; i++ {
 		var t = time.Now()
-		var res, _ = client.Request(context.Background(), &rpc.Request{ServerName: "Test", MethodName: "Login"})
+		var res, _ = client.Request(&rpc.Request{ServerName: "Test", MethodName: "Login"})
 		fmt.Println("得到数据:", res, time.Since(t))
 	}
 }

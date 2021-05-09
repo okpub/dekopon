@@ -1,6 +1,8 @@
 package message
 
 import (
+	"fmt"
+
 	"github.com/okpub/dekopon/bean/message/rpc"
 	"github.com/okpub/dekopon/conn/packet"
 	"google.golang.org/protobuf/proto"
@@ -12,9 +14,19 @@ func Request(p *packet.Packet) *rpc.Request {
 	return res
 }
 
-func Ask(p *packet.Packet) (res *rpc.Response, err error) {
-	res = &rpc.Response{}
-	err = proto.Unmarshal(p.Body, res)
+/*
+* 得到回执
+ */
+func Ask(data interface{}) (res *rpc.Response, err error) {
+	switch p := data.(type) {
+	case *packet.Packet:
+		res = &rpc.Response{}
+		err = proto.Unmarshal(p.Body, res)
+	case *rpc.Response:
+		res = p
+	default:
+		err = fmt.Errorf("the res can't unpack %T", data)
+	}
 	return
 }
 

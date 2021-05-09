@@ -29,76 +29,86 @@ func NewClient(args ...network.SocketOption) *Client {
 		packetChan:    make(chan *packet.Packet)}
 }
 
-func (client *Client) Start(ctx context.Context) {
-	go client.Serve(ctx)
+func (client *Client) Start() {
+	go client.Serve(context.Background())
 }
 
-func (client *Client) Serve(parent context.Context) {
+func (client *Client) Serve(ctx context.Context) {
 	var (
-		conn, err   = client.Connect()
-		ctx, cancel = context.WithCancel(parent)
+		conn, err     = client.Connect()
+		child, cancel = context.WithCancel(ctx)
 	)
 	defer cancel()
-	defer client.Close()
 	if err == nil {
-		go client.ListenAndWrite(ctx, conn)
+		go func() {
+			client.ListenAndWrite(child, conn)
+		}()
 
 		client.ListenAndRead(conn)
+	} else {
+		client.Close()
 	}
 }
 
 func (client *Client) ListenAndWrite(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
-	var sendCh = client.TaskBuffer
+
+	var (
+		sendCh         = client.TaskBuffer
+		processRequest = func(event actor.Request) {
+			if body, err := client.Encoder.Encode(event.Message()); err == nil {
+				if _, err := conn.Write(body); err == nil {
+					select {
+					case <-ctx.Done():
+						//cancel error
+					case p := <-client.packetChan:
+						event.Respond(p)
+					}
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	)
+
 	for message := range sendCh {
 		switch event := message.(type) {
 		case actor.Request:
-			client.processRequest(ctx, conn, event)
+			processRequest(event)
 		default:
-			fmt.Println("can't handler message type:", message)
+			fmt.Println("can't handler other message type:", message)
 		}
 	}
 }
 
-func (client *Client) processRequest(ctx context.Context, conn net.Conn, event actor.Request) {
-	if body, err := client.Encoder.Encode(event.Message()); err == nil {
-		if _, err := conn.Write(body); err == nil {
-			select {
-			case <-ctx.Done():
-				//cancel error
-			case p := <-client.packetChan:
-				event.Respond(p)
-			}
-		}
-	}
-}
-
-func (client *Client) Request(ctx context.Context, req *rpc.Request) (res *rpc.Response, err error) {
-	var data interface{}
-	data, err = client.CallUserMessage(ctx, req)
-	if err == nil {
-		res, err = message.Ask(data.(*packet.Packet))
-	}
-	return
-}
-
-/*
-* 监听读取
- */
 func (client *Client) ListenAndRead(conn net.Conn) (err error) {
 	var (
-		buf     = bytes.NewBuffer(nil)
-		packets []*packet.Packet
+		sendChan = client.TaskBuffer
+		buf      = bytes.NewBuffer(nil)
+		packets  []*packet.Packet
 	)
+	defer sendChan.Close()
 	for {
 		if packets, err = network.ReadPackets(buf, conn, client.Decoder); err == nil {
 			for _, message := range packets {
 				client.packetChan <- message
 			}
 		} else {
-			//忽略临时报错, 直接关闭
 			break
 		}
+	}
+	return
+}
+
+//request func
+func (client *Client) Request(req *rpc.Request) (*rpc.Response, error) {
+	return client.RequestCtx(context.Background(), req)
+}
+
+func (client *Client) RequestCtx(ctx context.Context, req *rpc.Request) (res *rpc.Response, err error) {
+	var data interface{}
+	if data, err = client.CallUserMessage(ctx, req); err == nil {
+		res, err = message.Ask(data)
 	}
 	return
 }
