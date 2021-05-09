@@ -3,7 +3,7 @@ package actor
 import (
 	"context"
 
-	"github.com/okpub/dekopon/utils"
+	"github.com/skimmer/utils"
 )
 
 type actorSystem struct {

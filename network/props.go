@@ -3,7 +3,7 @@ package network
 import (
 	"net"
 
-	"github.com/okpub/dekopon/actor"
+	"github.com/skimmer/actor"
 )
 
 func SetContextMiddleware(conn net.Conn) actor.ContextDecorator {

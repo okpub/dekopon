@@ -1,19 +1,16 @@
 package message
 
 import (
-	"fmt"
-
-	"github.com/okpub/dekopon/bean/message/common"
-	"github.com/okpub/dekopon/conn/packet"
+	"github.com/skimmer/bean/message/common"
+	"github.com/skimmer/conn/packet"
 	"google.golang.org/protobuf/proto"
 )
 
 //unpack
 func UnPack(p *packet.Packet) *common.UserMessage {
-	var m = &common.UserMessage{}
-	var err = proto.Unmarshal(p.Body, m)
-	fmt.Println(err)
-	return m
+	var res = &common.UserMessage{}
+	proto.Unmarshal(p.Body, res)
+	return res
 }
 
 func GetMessage(m *common.UserMessage, any proto.Message) (err error) {
@@ -23,22 +20,22 @@ func GetMessage(m *common.UserMessage, any proto.Message) (err error) {
 
 //pack
 func Pack(cmd int32, args ...MessageOption) *common.UserMessage {
-	var m = &common.UserMessage{
+	var req = &common.UserMessage{
 		Header: &common.MessageHeader{Cmd: cmd},
 	}
 
 	for _, o := range args {
-		o(m)
+		o(req)
 	}
 
-	return m
+	return req
 }
 
 //消息头可选参数
 type MessageOption func(*common.UserMessage)
 
 //消息类型
-func SetType(n int32) MessageOption {
+func SetMessageType(n int32) MessageOption {
 	return func(p *common.UserMessage) {
 		p.Header.MessageType = n
 	}
@@ -51,7 +48,7 @@ func SetServer(n int32) MessageOption {
 	}
 }
 
-func SetMessage(any proto.Message) MessageOption {
+func SetMessageData(any proto.Message) MessageOption {
 	return func(p *common.UserMessage) {
 		p.Body, _ = proto.Marshal(any)
 	}

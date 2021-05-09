@@ -18,8 +18,14 @@ type actorContext struct {
 	receiveDur time.Duration
 }
 
+//依赖父节点环境
 func NewContext(info infoPart, props *Props) *actorContext {
 	return &actorContext{infoPart: info, props: props}
+}
+
+//独立的context
+func NewSelf(pid PID, props *Props) *actorContext {
+	return &actorContext{infoPart: &Node{self: pid}, props: props}
 }
 
 func (ctx *actorContext) init() {

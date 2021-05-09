@@ -3,7 +3,7 @@ package network
 import (
 	"fmt"
 
-	"github.com/okpub/dekopon/actor"
+	"github.com/skimmer/actor"
 )
 
 const (
@@ -17,23 +17,26 @@ func NewServer(args ...ServerOption) Server {
 		Addr:    DefaultServerAddr,
 		Network: TCP,
 	}
-	options.Filler(args)
 
+	return FromServer(options.Filler(args))
+}
+
+func FromServer(options *ServerOptions) Server {
 	switch options.Network {
 	case TCP:
 		return &TcpServer{ServerOptions: options, TaskDone: actor.MakeDone()}
 	case WEB:
 		return &WebServer{ServerOptions: options, TaskDone: actor.MakeDone()}
 	default:
-		panic(fmt.Errorf("the network untype: %s", options.Network))
+		panic(fmt.Errorf("can't open server untype: %s", options.Network))
 	}
 }
 
+//服务器选项
 type ServerOptions struct {
-	Addr     string
-	Network  string
-	MaxConn  int
-	ReadSize int
+	Addr    string
+	Network string
+	MaxConn int
 }
 
 func (options ServerOptions) Options() ServerOptions { return options }

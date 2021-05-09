@@ -1,6 +1,6 @@
 package actor
 
-import "github.com/okpub/dekopon/utils"
+import "github.com/skimmer/utils"
 
 type TaskDone chan struct{}
 

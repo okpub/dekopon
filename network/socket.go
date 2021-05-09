@@ -6,38 +6,45 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/okpub/dekopon/actor"
-	"github.com/okpub/dekopon/conn/codec"
-	"github.com/okpub/dekopon/conn/packet"
-	"github.com/okpub/dekopon/mailbox"
-	"github.com/okpub/dekopon/utils"
+	"github.com/skimmer/actor"
+	"github.com/skimmer/conn/codec"
+	"github.com/skimmer/conn/packet"
+	"github.com/skimmer/mailbox"
 )
 
 /*
  * 问答socket
  */
-type SocketProcess struct {
+type Socket struct {
 	mailbox.TaskBuffer
 	mailbox.InvokerMessage
 	SocketOptions
+
+	packetChan mailbox.TaskBuffer
 }
 
-func NewSocket(options SocketOptions) *SocketProcess {
-	return &SocketProcess{SocketOptions: options, TaskBuffer: mailbox.MakeBuffer(options.PendingNum)}
+func NewSocket(args ...SocketOption) *Socket {
+	var options = NewOptions()
+	options.Filler(args)
+	return &Socket{
+		SocketOptions: options,
+		TaskBuffer:    mailbox.MakeBuffer(options.PendingNum),
+		packetChan:    mailbox.MakeBlock(),
+	}
 }
 
-func WithSocket(options SocketOptions, conn net.Conn) *SocketProcess {
-	var socket = NewSocket(options)
-	socket.WithAddr(conn.RemoteAddr().String()).WithNetwork(WEB)
+func WithSocket(conn net.Conn, args ...SocketOption) *Socket {
+	var socket = NewSocket(args...)
+	socket.WithAddr(conn.RemoteAddr().String())
 	return socket
 }
 
-func (socket *SocketProcess) RegisterHander(invoker mailbox.InvokerMessage) {
+func (socket *Socket) RegisterHander(invoker mailbox.InvokerMessage) {
 	socket.InvokerMessage = invoker
 }
 
 //代替Start
-func (socket *SocketProcess) Serve(ctx context.Context, conn net.Conn, err error) error {
+func (socket *Socket) Serve(ctx context.Context, conn net.Conn, err error) error {
 	defer socket.InvokeSystemMessage(actor.EVENT_STOP)
 	defer socket.InvokeSystemMessage(EVENT_CLOSED)
 
@@ -53,36 +60,37 @@ func (socket *SocketProcess) Serve(ctx context.Context, conn net.Conn, err error
 }
 
 //override public
-func (socket *SocketProcess) Start(ctx context.Context) error {
+func (socket *Socket) Start(ctx context.Context) error {
 	panic(fmt.Errorf("please apply Serve with Error"))
 }
 
-func (socket *SocketProcess) run(ctx context.Context, conn net.Conn) (err error) {
-	var (
-		wg actor.WaitGroup
-	)
+func (socket *Socket) run(ctx context.Context, conn net.Conn) (err error) {
 	socket.InvokeSystemMessage(EVENT_OPEN)
 	//异步写入
-	wg.Wrap(func() {
-		socket.ListenAndWrite(conn)
-	})
+	go socket.ListenAndWrite(conn)
 	//同步读取
-	err = socket.ListenAndRead(conn)
-	wg.Wait()
+	go func() {
+		defer socket.packetChan.Close()
+		socket.ListenAndRead(conn)
+	}()
+
+	for data := range socket.packetChan {
+		socket.InvokeUserMessage(data)
+	}
 	return
 }
 
 /*
 * 监听写入
  */
-func (socket *SocketProcess) ListenAndWrite(conn net.Conn) (err error) {
+func (socket *Socket) ListenAndWrite(conn net.Conn) (err error) {
 	var (
 		sendCh = socket.TaskBuffer
 		body   []byte
 	)
 	defer conn.Close()
 	for message := range sendCh {
-		if body, err = socket.Encoder.Encode(message); err == nil {
+		if body, err = socket.Encoder.Encode(actor.GetMessage(message)); err == nil {
 			_, err = conn.Write(body)
 		}
 	}
@@ -92,7 +100,7 @@ func (socket *SocketProcess) ListenAndWrite(conn net.Conn) (err error) {
 /*
 * 监听读取
  */
-func (socket *SocketProcess) ListenAndRead(conn net.Conn) (err error) {
+func (socket *Socket) ListenAndRead(conn net.Conn) (err error) {
 	var (
 		sendCh  = socket.TaskBuffer
 		buf     = bytes.NewBuffer(nil)
@@ -100,23 +108,25 @@ func (socket *SocketProcess) ListenAndRead(conn net.Conn) (err error) {
 	)
 	defer sendCh.Close()
 	for {
-		packets, err = socket.readPackets(buf, conn)
-		for _, message := range packets {
-			socket.InvokeUserMessage(message)
-		}
-
-		if utils.Die(err) {
+		if packets, err = socket.readPackets(buf, conn); err == nil {
+			for _, message := range packets {
+				//socket.InvokeUserMessage(message)
+				socket.packetChan <- message
+			}
+		} else {
 			if Temporary(err) {
-				socket.InvokeSystemMessage(&TempErr{Err: err})
+				socket.packetChan <- &TempErr{Err: err}
+				//socket.InvokeSystemMessage(&TempErr{Err: err})
 			} else {
 				break
 			}
+
 		}
 	}
 	return
 }
 
-func (socket *SocketProcess) readPackets(buf *bytes.Buffer, conn net.Conn) (packets []*packet.Packet, err error) {
+func (socket *Socket) readPackets(buf *bytes.Buffer, conn net.Conn) (packets []*packet.Packet, err error) {
 	var (
 		n              int
 		totalProcessed int
@@ -124,13 +134,17 @@ func (socket *SocketProcess) readPackets(buf *bytes.Buffer, conn net.Conn) (pack
 	)
 
 	if n, err = conn.Read(body[0:]); n > 0 {
-		_, err = buf.Write(body[:n])
+		buf.Write(body[:n])
 	}
 
-	packets, err = socket.Decoder.Decode(buf.Bytes())
-	for _, message := range packets {
-		totalProcessed += codec.HeadSize + message.Len()
+	if err == nil {
+		packets, err = socket.Decoder.Decode(buf.Bytes())
+		for _, message := range packets {
+			totalProcessed += codec.HeadSize + message.Len()
+		}
+		buf.Next(totalProcessed)
+	} else {
+		fmt.Println(err.Error())
 	}
-	buf.Next(totalProcessed)
 	return
 }
