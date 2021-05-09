@@ -21,7 +21,7 @@ func (c *PomeloPacketEncoder) Encode(message interface{}) (data []byte, err erro
 		}
 	case packet.Message:
 		if data, err = p.Marshal(); err == nil {
-			data, err = c.pack(data)
+			data, err = c.flush(data)
 		}
 	default:
 		panic(fmt.Errorf("the message untype %T", message))
@@ -29,7 +29,7 @@ func (c *PomeloPacketEncoder) Encode(message interface{}) (data []byte, err erro
 	return
 }
 
-func (*PomeloPacketEncoder) pack(body []byte) (data []byte, err error) {
+func (*PomeloPacketEncoder) flush(body []byte) (data []byte, err error) {
 	if len(body) > MaxPacketSize {
 		err = ErrPacketSizeExcced
 	} else {
