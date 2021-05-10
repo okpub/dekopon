@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"context"
 	"sync"
 )
 
@@ -19,13 +18,4 @@ func (w *WaitGroup) Wrap(fn func()) {
 
 func (w *WaitGroup) Wait() {
 	w.wg.Wait()
-}
-
-//static func
-func Wait(ctx context.Context) {
-	WaitDone(ctx.Done())
-}
-
-func WaitDone(exit <-chan struct{}) {
-	<-exit
 }

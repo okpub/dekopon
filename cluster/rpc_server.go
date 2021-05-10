@@ -19,12 +19,7 @@ type RPCServer struct {
 }
 
 func NewRPCServer(pid PIDSet, args ...network.ServerOption) *RPCServer {
-	var options = &network.ServerOptions{
-		Network: network.TCP,
-		MaxConn: 1000,
-	}
-	options.Filler(args)
-	return &RPCServer{Server: network.FromServer(options), PIDSet: pid}
+	return &RPCServer{Server: network.NewServer(args...), PIDSet: pid}
 }
 
 func (s *RPCServer) Start(ctx context.Context) {
@@ -41,19 +36,12 @@ func (s *RPCServer) Disconnect() {
 }
 
 func (s *RPCServer) handleConn(server context.Context, conn net.Conn) {
-	var (
-		socket = network.WithSocket(conn)
-		pid    = actor.NewPID(server, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
-	)
-	var props = network.From(conn, func(ctx actor.ActorContext) {
+	network.SpawnConn(server, conn, func(ctx actor.ActorContext) {
 		switch event := ctx.Message().(type) {
 		case *packet.Packet:
-			s.processExchange(ctx, message.Request(event))
+			s.processExchange(ctx, message.UnpackReq(event))
 		}
 	})
-
-	socket.RegisterHander(actor.NewSelf(pid, props))
-	socket.ServeConn(server, conn)
 }
 
 //通过serverName获取不同通道的pid,将多个或者一个功能集合

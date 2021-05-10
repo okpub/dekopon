@@ -14,6 +14,8 @@ type Producer func() Actor
 //静态函数actor
 type ActorFunc func(ActorContext)
 
+var defaultEmptyActor = ActorFunc(func(ctx ActorContext) {})
+
 func (method ActorFunc) Received(ctx ActorContext) {
 	method(ctx)
 }

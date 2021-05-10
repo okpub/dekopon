@@ -1,13 +1,14 @@
 package utils
 
-import "context"
-
-var (
-	ParentCtxKey = struct{}{}
-	emptCtxValue = struct{}{}
+import (
+	"context"
 )
 
-//仅仅包裹一层
-func WithValue(ctx context.Context) context.Context {
-	return context.WithValue(ctx, ParentCtxKey, emptCtxValue)
+//static func
+func Wait(ctx context.Context) {
+	WaitDone(ctx.Done())
+}
+
+func WaitDone(exit <-chan struct{}) {
+	<-exit
 }

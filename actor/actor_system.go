@@ -69,6 +69,6 @@ func (stage *actorSystem) Shutdown() {
 }
 
 func (stage *actorSystem) Wait() {
-	WaitDone(stage.Done())
+	utils.WaitDone(stage.Done())
 	stage.WaitGroup.Wait()
 }

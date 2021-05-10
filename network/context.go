@@ -7,7 +7,7 @@ import (
 	"github.com/okpub/dekopon/actor"
 )
 
-//extends ActorContext
+//最好不要建立child
 type SocketContext struct {
 	actor.ActorContext
 	conn net.Conn

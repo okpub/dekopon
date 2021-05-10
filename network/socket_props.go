@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"net"
 
 	"github.com/okpub/dekopon/actor"
@@ -14,8 +15,19 @@ func SetContextMiddleware(conn net.Conn) actor.ContextDecorator {
 	}
 }
 
-func From(conn net.Conn, method actor.ActorFunc) *actor.Props {
+func fromConn(conn net.Conn, method actor.ActorFunc) *actor.Props {
 	return actor.From(method).WithContextDecorator(SetContextMiddleware(conn))
+}
+
+func SpawnConn(ctx context.Context, conn net.Conn, method actor.ActorFunc, args ...SocketOption) actor.PID {
+	var (
+		socket = WithSocket(conn, args...)
+		pid    = actor.NewPID(ctx, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
+		props  = fromConn(conn, method)
+	)
+	socket.RegisterHander(actor.NewSelf(pid, props))
+	socket.ServeConn(ctx, conn)
+	return pid
 }
 
 func FromDial(args ...SocketOption) *actor.Props {

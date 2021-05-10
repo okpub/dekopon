@@ -20,13 +20,7 @@ type NatsRPCServer struct {
 }
 
 func NewNatServer(pid actor.PID, args ...network.ServerOption) *NatsRPCServer {
-	var options = &network.ServerOptions{
-		Network: network.TCP,
-		MaxConn: 1000,
-	}
-	options.Filler(args)
-
-	return &NatsRPCServer{Server: network.FromServer(options), listener: pid}
+	return &NatsRPCServer{Server: network.NewServer(args...), listener: pid}
 }
 
 func (s *NatsRPCServer) Start(ctx context.Context) {
@@ -40,12 +34,8 @@ func (s *NatsRPCServer) Serve(ctx context.Context) (err error) {
 
 //无状态控制
 func (s *NatsRPCServer) handleConn(server context.Context, conn net.Conn) {
-	var (
-		socket = network.WithSocket(conn)
-		pid    = actor.NewPID(server, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
-	)
-	var ping = true
-	var props = network.From(conn, func(ctx actor.ActorContext) {
+	var ping = false
+	network.SpawnConn(server, conn, func(ctx actor.ActorContext) {
 		switch event := ctx.Message().(type) {
 		case *network.EventOpen:
 			ctx.SetReceiveTimeout(network.PingTime)
@@ -63,9 +53,6 @@ func (s *NatsRPCServer) handleConn(server context.Context, conn net.Conn) {
 			}
 		}
 	})
-
-	socket.RegisterHander(actor.NewSelf(pid, props))
-	socket.ServeConn(server, conn)
 }
 
 func (s *NatsRPCServer) Disconnect() {

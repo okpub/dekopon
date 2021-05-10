@@ -51,7 +51,10 @@ func (socket *Socket) ServeConn(ctx context.Context, conn net.Conn) (err error) 
 
 //override public
 func (socket *Socket) Start(ctx context.Context) error {
-	var conn, err = socket.Connect()
+	var (
+		conn, err = socket.Connect()
+	)
+
 	defer socket.InvokeSystemMessage(actor.EVENT_STOP)
 	defer socket.InvokeSystemMessage(EVENT_CLOSED)
 

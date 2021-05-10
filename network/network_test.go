@@ -17,12 +17,8 @@ var wgRoot actor.WaitGroup
 
 func handlerConn(parent actor.NodePart, handler actor.PID) Handler {
 	return func(server context.Context, conn net.Conn) {
-		var (
-			socket = WithSocket(conn)
-			pid    = actor.NewPID(server, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
-		)
 		var ping = false
-		var props = From(conn, func(ctx actor.ActorContext) {
+		SpawnConn(server, conn, func(ctx actor.ActorContext) {
 			switch event := ctx.Message().(type) {
 			case *EventOpen:
 				ctx.SetReceiveTimeout(time.Second * 1)
@@ -42,11 +38,6 @@ func handlerConn(parent actor.NodePart, handler actor.PID) Handler {
 				}
 			}
 		})
-
-		var ctx = actor.NewContext(parent.ChildOf(pid), props)
-
-		socket.RegisterHander(ctx)
-		socket.ServeConn(server, conn)
 	}
 }
 
@@ -95,8 +86,8 @@ func register_serve(parent actor.SpawnContext, id int, name string) {
 
 func TestInit(t *testing.T) {
 	var (
-		ctx, cancel = context.WithTimeout(context.Background(), time.Second*3)
-		stage       = actor.WithSystem(ctx)
+		ccc, cancel = context.WithTimeout(context.Background(), time.Second*3)
+		stage       = actor.WithSystem(ccc)
 	)
 	defer cancel()
 
@@ -104,19 +95,31 @@ func TestInit(t *testing.T) {
 	register_serve(stage, 2, "房间")
 	register_serve(stage, 3, "登陆")
 
+	stage.ActorOf(actor.From(func(ctx actor.ActorContext) {
+		switch event := ctx.Message().(type) {
+		case *actor.Started:
+			var pid = FromServer(ctx.Background(), handlerConn(stage, router[3]), SetAddr(":9001"), SetNetwork(WEB))
+			ctx.Watch(pid)
+
+			time.Sleep(time.Millisecond * 10)
+			dial_client(stage, "localhost:9001", WEB)
+
+			time.Sleep(time.Second * 1)
+			pid.Close()
+		case *actor.Terminated:
+			fmt.Println("被迫营业:", event.GetWho())
+		case *actor.Stopped:
+			//可以等待服务器pid
+		}
+	}))
+
 	var tcpServer = NewServer(SetAddr(":9003"))
 	wgRoot.Wrap(func() {
-		tcpServer.ListenAndServe(ctx, handlerConn(stage, router[3]))
+		tcpServer.ListenAndServe(ccc, handlerConn(stage, router[3]))
 	})
 	time.Sleep(time.Millisecond * 10)
 	dial_client(stage, "localhost:9003", TCP)
 
-	var clientServer = NewServer(SetAddr(":9001"), SetNetwork(WEB))
-	wgRoot.Wrap(func() {
-		clientServer.ListenAndServe(ctx, handlerConn(stage, router[3]))
-	})
-	time.Sleep(time.Millisecond * 10)
-	dial_client(stage, "localhost:9001", WEB)
 	wgRoot.Wait()
 
 	stage.Wait()

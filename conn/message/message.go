@@ -6,6 +6,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const (
+	defaultVersion    = 100
+	defaultSubVersion = 1
+)
+
+type DataMessage interface {
+	GetBody() []byte
+}
+
 //unpack
 func UnPack(p *packet.Packet) *common.UserMessage {
 	var res = &common.UserMessage{}
@@ -13,15 +22,13 @@ func UnPack(p *packet.Packet) *common.UserMessage {
 	return res
 }
 
-func GetMessage(m *common.UserMessage, any proto.Message) (err error) {
-	err = proto.Unmarshal(m.Body, any)
-	return
-}
-
-//pack
 func Pack(cmd int32, args ...MessageOption) *common.UserMessage {
 	var req = &common.UserMessage{
-		Header: &common.MessageHeader{Cmd: cmd},
+		Header: &common.MessageHeader{
+			Cmd:        cmd,
+			Version:    defaultVersion,
+			SubVersion: defaultSubVersion,
+		},
 	}
 
 	for _, o := range args {
@@ -29,6 +36,11 @@ func Pack(cmd int32, args ...MessageOption) *common.UserMessage {
 	}
 
 	return req
+}
+
+func GetMessage(m DataMessage, any proto.Message) (err error) {
+	err = proto.Unmarshal(m.GetBody(), any)
+	return
 }
 
 //消息头可选参数

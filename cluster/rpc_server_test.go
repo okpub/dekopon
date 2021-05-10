@@ -13,8 +13,7 @@ import (
 )
 
 //最终处理
-type Test struct {
-}
+type Test struct{}
 
 func (t *Test) Login(req *rpc.Request) (res *rpc.Response, err error) {
 	fmt.Println("登陆")

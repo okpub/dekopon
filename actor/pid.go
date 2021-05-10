@@ -2,6 +2,8 @@ package actor
 
 import (
 	"context"
+
+	"github.com/okpub/dekopon/utils"
 )
 
 type PID interface {
@@ -76,7 +78,7 @@ func (pid *actorRef) Close() (err error) {
 
 func (pid *actorRef) GracefulStop() (err error) {
 	err = pid.ref.PostStop(pid)
-	Wait(pid.Background())
+	utils.Wait(pid.Background())
 	return
 }
 

@@ -23,13 +23,15 @@ func NewContext(info infoPart, props *Props) *actorContext {
 	return &actorContext{infoPart: info, props: props}
 }
 
-//独立的context
+//独立的context(不存在stage和parent)
 func NewSelf(pid PID, props *Props) *actorContext {
 	return &actorContext{infoPart: &Node{self: pid}, props: props}
 }
 
 func (ctx *actorContext) init() {
-	ctx.actor = ctx.props.NewActor()
+	if ctx.actor = ctx.props.NewActor(); ctx.actor == nil {
+		ctx.actor = defaultEmptyActor
+	}
 }
 
 func (ctx *actorContext) getExtras() *actorContextExtras {
@@ -45,7 +47,7 @@ func (ctx *actorContext) getExtras() *actorContextExtras {
 
 //base
 func (ctx *actorContext) Watch(who PID) error {
-	return who.sendSystemMessage(&Terminated{Who: ctx.Self()})
+	return who.sendSystemMessage(&Watch{Who: ctx.Self()})
 }
 
 func (ctx *actorContext) Unwatch(who PID) error {

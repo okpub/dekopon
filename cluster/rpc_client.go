@@ -52,10 +52,9 @@ func (client *Client) Serve(ctx context.Context) {
 
 func (client *Client) ListenAndWrite(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
-
 	var (
-		sendCh         = client.TaskBuffer
-		processRequest = func(event actor.Request) {
+		sendCh        = client.TaskBuffer
+		handleRequest = func(event actor.Request) {
 			if body, err := client.Encoder.Encode(event.Message()); err == nil {
 				if _, err := conn.Write(body); err == nil {
 					select {
@@ -74,7 +73,7 @@ func (client *Client) ListenAndWrite(ctx context.Context, conn net.Conn) {
 	for message := range sendCh {
 		switch event := message.(type) {
 		case actor.Request:
-			processRequest(event)
+			handleRequest(event)
 		default:
 			fmt.Println("can't handler other message type:", message)
 		}
@@ -108,7 +107,7 @@ func (client *Client) Request(req *rpc.Request) (*rpc.Response, error) {
 func (client *Client) RequestCtx(ctx context.Context, req *rpc.Request) (res *rpc.Response, err error) {
 	var data interface{}
 	if data, err = client.CallUserMessage(ctx, req); err == nil {
-		res, err = message.Ask(data)
+		res, err = message.UnpackRes(data)
 	}
 	return
 }

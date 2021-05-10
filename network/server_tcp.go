@@ -19,13 +19,13 @@ type TcpServer struct {
  * 1 这里之所以新建一context是因为服务器退出，他所有依赖的子context退出
  * 2 如果服务器退出，并不意味此服务关闭，可以循环调用来重启
  */
-func (svr *TcpServer) ListenAndServe(ctx context.Context, handler Handler) (err error) {
+func (server *TcpServer) ListenAndServe(ctx context.Context, handler Handler) (err error) {
 	var (
 		ln net.Listener
 	)
 
-	if ln, err = net.Listen(TCP, svr.Addr); mailbox.Fail(err) {
-		fmt.Println("Fail: close tcp server#", err)
+	if ln, err = net.Listen(TCP, server.Addr); mailbox.Fail(err) {
+		fmt.Println("ERROR: close tcp server#", err)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (svr *TcpServer) ListenAndServe(ctx context.Context, handler Handler) (err 
 	go func() {
 		defer ln.Close()
 		select {
-		case <-svr.Done():
+		case <-server.Done():
 		case <-child.Done():
 		}
 	}()
@@ -55,7 +55,7 @@ func (svr *TcpServer) ListenAndServe(ctx context.Context, handler Handler) (err 
 		defer conns.CloseAll()
 		for {
 			if conn, err = ln.Accept(); err == nil {
-				if conns.SetConnMax(conn, svr.MaxConn) {
+				if conns.SetConnMax(conn, server.MaxConn) {
 					wg.Wrap(handlerConn(conn))
 				} else {
 					conn.Close()
