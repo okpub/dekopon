@@ -2,15 +2,18 @@ package actor
 
 import (
 	"context"
+	"sync"
 
 	"github.com/okpub/dekopon/utils"
 )
 
 type actorSystem struct {
 	Node
-	TaskDone
-	WaitGroup
+	utils.TaskDone
 	ctx context.Context
+
+	mu sync.Mutex
+	PIDSet
 }
 
 func NewSystem() ActorSystem {
@@ -21,16 +24,18 @@ func NewSystem() ActorSystem {
 * 自定义系统Actor
 * 注意: 最好不要在退出actorSystem之前关闭ctx，而是调用Shutdown之后再关闭ctx
  */
-func WithSystem(ctx context.Context) ActorSystem {
+func WithSystem(parent context.Context) ActorSystem {
 	var (
-		exit  = MakeDone()
-		stage = &actorSystem{TaskDone: exit, ctx: ctx}
+		exit        = utils.MakeDone()
+		ctx, cancel = context.WithCancel(parent)
+		stage       = &actorSystem{TaskDone: exit, ctx: ctx, PIDSet: make(PIDSet)}
 	)
 
 	go func() {
+		defer cancel()
 		select {
 		case <-ctx.Done():
-			utils.SafeDone(exit)
+			exit.Shutdown()
 		case <-exit:
 		}
 	}()
@@ -45,30 +50,24 @@ func (stage *actorSystem) init() ActorSystem {
 }
 
 //override
-func (stage *actorSystem) ActorOf(props *Props, args ...PIDOption) (pid PID) {
+func (stage *actorSystem) ActorOf(props *Props, args ...ActorOption) (pid PID) {
 	pid = props.spawn(stage, NewOptions(args))
-	stage.Wrap(func() {
-		select {
-		case <-pid.Background().Done():
-			//pid closed
-		case <-stage.Done():
-			pid.GracefulStop()
-		}
-	})
 
+	stage.mu.Lock()
+	stage.PIDSet.Set(pid)
+	stage.mu.Unlock()
 	return
 }
 
-func (stage *actorSystem) Background() context.Context {
-	return stage.ctx
-}
-
 //system
-func (stage *actorSystem) Shutdown() {
-	stage.Close()
-}
-
 func (stage *actorSystem) Wait() {
 	utils.WaitDone(stage.Done())
-	stage.WaitGroup.Wait()
+
+	stage.mu.Lock()
+	var list = stage.PIDSet.Values()
+	stage.mu.Unlock()
+
+	for _, pid := range list {
+		pid.GracefulStop()
+	}
 }

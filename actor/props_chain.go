@@ -13,29 +13,8 @@ func (props *Props) WithSpawnMiddleware(middleware ...SpawnMiddleware) *Props {
 	props.spawnMiddleware = append(props.spawnMiddleware, middleware...)
 
 	props.spawnMiddlewareChain = makeSpawnMiddlewareChain(props.spawnMiddleware,
-		func(parent SpawnContext, _ *Props, options *PIDOptions) PID {
+		func(parent SpawnContext, _ *Props, options *ActorOptions) PID {
 			return props.spawn(parent, options)
-		})
-
-	return props
-}
-
-//values
-func (props *Props) WithValue(key, value interface{}) *Props {
-	var middleware = func(next ValueFunc) ValueFunc {
-		return func(ctx context.Context) context.Context {
-			return next(context.WithValue(ctx, key, value))
-		}
-	}
-	return props.WithValueMiddleware(middleware)
-}
-
-func (props *Props) WithValueMiddleware(middleware ...ValueMiddleware) *Props {
-	props.valueMiddleware = append(props.valueMiddleware, middleware...)
-
-	props.valueMiddlewareChain = makeValueMiddlewareChain(props.valueMiddleware,
-		func(ctx context.Context) context.Context {
-			return ctx
 		})
 
 	return props

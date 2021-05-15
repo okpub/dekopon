@@ -7,12 +7,17 @@ import (
 	"time"
 
 	"github.com/okpub/dekopon/actor"
-	"github.com/okpub/dekopon/mailbox"
+	"github.com/okpub/dekopon/utils"
 )
 
 type TcpServer struct {
-	actor.TaskDone
+	utils.TaskDone
 	*ServerOptions
+}
+
+func (server *TcpServer) Close() (err error) {
+	server.Shutdown()
+	return
 }
 
 /*
@@ -24,7 +29,7 @@ func (server *TcpServer) ListenAndServe(ctx context.Context, handler Handler) (e
 		ln net.Listener
 	)
 
-	if ln, err = net.Listen(TCP, server.Addr); mailbox.Fail(err) {
+	if ln, err = net.Listen(TCP, server.Addr); utils.Die(err) {
 		fmt.Println("ERROR: close tcp server#", err)
 		return
 	}

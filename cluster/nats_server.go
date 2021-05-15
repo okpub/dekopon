@@ -23,6 +23,10 @@ func NewNatServer(pid actor.PID, args ...network.ServerOption) *NatsRPCServer {
 	return &NatsRPCServer{Server: network.NewServer(args...), listener: pid}
 }
 
+func (s *NatsRPCServer) Disconnect() {
+	s.Server.Close()
+}
+
 func (s *NatsRPCServer) Start(ctx context.Context) {
 	go s.Serve(ctx)
 }
@@ -35,7 +39,7 @@ func (s *NatsRPCServer) Serve(ctx context.Context) (err error) {
 //无状态控制
 func (s *NatsRPCServer) handleConn(server context.Context, conn net.Conn) {
 	var ping = false
-	network.SpawnConn(server, conn, func(ctx actor.ActorContext) {
+	network.SpawnConn(conn, func(ctx actor.ActorContext) {
 		switch event := ctx.Message().(type) {
 		case *network.EventOpen:
 			ctx.SetReceiveTimeout(network.PingTime)
@@ -53,8 +57,4 @@ func (s *NatsRPCServer) handleConn(server context.Context, conn net.Conn) {
 			}
 		}
 	})
-}
-
-func (s *NatsRPCServer) Disconnect() {
-	s.Server.Close()
 }

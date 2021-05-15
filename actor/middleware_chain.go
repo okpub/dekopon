@@ -4,9 +4,6 @@ import (
 	"context"
 )
 
-type ValueFunc func(context.Context) context.Context
-type ValueMiddleware func(next ValueFunc) ValueFunc
-
 //middleware
 type ReceiverFunc func(ReceiverContext, MessageEnvelope)
 type ReceiverMiddleware func(next ReceiverFunc) ReceiverFunc
@@ -17,7 +14,7 @@ type SenderMiddleware func(next SenderFunc) SenderFunc
 type ContextDecoratorFunc func(ActorContext) ActorContext
 type ContextDecorator func(next ContextDecoratorFunc) ContextDecoratorFunc
 
-type SpawnFunc func(SpawnContext, *Props, *PIDOptions) PID
+type SpawnFunc func(SpawnContext, *Props, *ActorOptions) PID
 type SpawnMiddleware func(next SpawnFunc) SpawnFunc
 
 func makeReceiverMiddlewareChain(receiverMiddleware []ReceiverMiddleware, lastReceiver ReceiverFunc) ReceiverFunc {
@@ -68,14 +65,16 @@ func makeSpawnMiddlewareChain(spawnMiddleware []SpawnMiddleware, lastSpawn Spawn
 	return h
 }
 
-func makeValueMiddlewareChain(valueMiddleware []ValueMiddleware, lastSpawn ValueFunc) ValueFunc {
-	if len(valueMiddleware) == 0 {
-		return nil
-	}
+// type ValueFunc func(context.Context) context.Context
+// type ValueMiddleware func(next ValueFunc) ValueFunc
+// func makeValueMiddlewareChain(valueMiddleware []ValueMiddleware, lastSpawn ValueFunc) ValueFunc {
+// 	if len(valueMiddleware) == 0 {
+// 		return nil
+// 	}
 
-	h := valueMiddleware[len(valueMiddleware)-1](lastSpawn)
-	for i := len(valueMiddleware) - 2; i >= 0; i-- {
-		h = valueMiddleware[i](h)
-	}
-	return h
-}
+// 	h := valueMiddleware[len(valueMiddleware)-1](lastSpawn)
+// 	for i := len(valueMiddleware) - 2; i >= 0; i-- {
+// 		h = valueMiddleware[i](h)
+// 	}
+// 	return h
+// }

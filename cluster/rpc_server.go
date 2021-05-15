@@ -36,17 +36,19 @@ func (s *RPCServer) Disconnect() {
 }
 
 func (s *RPCServer) handleConn(server context.Context, conn net.Conn) {
-	network.SpawnConn(server, conn, func(ctx actor.ActorContext) {
+	network.SpawnConn(conn, func(ctx actor.ActorContext) {
 		switch event := ctx.Message().(type) {
+		case *network.EventOpen:
+			ctx.CancelReceiveTimeout()
 		case *packet.Packet:
-			s.processExchange(ctx, message.UnpackReq(event))
+			s.processRequest(ctx, message.UnpackReq(event))
 		}
 	})
 }
 
 //通过serverName获取不同通道的pid,将多个或者一个功能集合
-func (s *RPCServer) processExchange(ctx actor.ActorContext, req *rpc.Request) {
-	if pid, ok := s.PIDSet[req.ServerName]; ok {
+func (s *RPCServer) processRequest(ctx actor.ActorContext, req *rpc.Request) {
+	if pid, ok := s.PIDSet.Get(req.ServerName); ok {
 		if res, err := pid.Call(req); err == nil {
 			ctx.Respond(res)
 		} else {
@@ -54,6 +56,6 @@ func (s *RPCServer) processExchange(ctx actor.ActorContext, req *rpc.Request) {
 		}
 	} else {
 		fmt.Println("ERROR: can't find ServerName:", req.ServerName)
-		ctx.Stop(ctx.Self())
+		ctx.Respond(message.ResErr(-1, message.SetResErr("can't find ServerName")))
 	}
 }

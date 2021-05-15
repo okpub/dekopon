@@ -37,19 +37,18 @@ func (a *TestCallActor) Received(ctx actor.ActorContext) {
 	switch event := ctx.Message().(type) {
 	case *actor.Started:
 		//todo
-	case actor.Request:
-		if req, ok := event.Message().(*rpc.Request); ok {
-			a.processRequest(ctx, event, req)
-		}
+	case *rpc.Request:
+		a.processRequest(ctx, event)
+
 	}
 }
 
-func (a *TestCallActor) processRequest(ctx actor.ActorContext, event actor.Request, req *rpc.Request) {
-	var res, err = ValueOf(a.Manager.Router(req.ServerName, req.MethodName, req))
+func (a *TestCallActor) processRequest(ctx actor.ActorContext, event *rpc.Request) {
+	var res, err = ValueOf(a.Manager.Router(event.ServerName, event.MethodName, event))
 	if err == nil {
-		event.Respond(res)
+		ctx.Respond(res)
 	} else {
-		event.Respond(err)
+		ctx.Respond(err)
 	}
 }
 

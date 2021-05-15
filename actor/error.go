@@ -1,5 +1,11 @@
 package actor
 
+import "errors"
+
+var (
+	NilErr = errors.New("the pid is nil")
+)
+
 //推送超时错误(为临时错误)
 type PublishError struct{}
 

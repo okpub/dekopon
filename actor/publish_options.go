@@ -13,11 +13,13 @@ type PublishOptions struct {
 	Message interface{}
 }
 
-func NewPublish(message interface{}) PublishOptions {
-	return PublishOptions{
+func NewPublish(message interface{}, args ...PublishOption) *PublishOptions {
+	var options = PublishOptions{
 		Message: message,
 		Context: context.Background(),
 	}
+
+	return options.Filler(args)
 }
 
 func (options *PublishOptions) Filler(args []PublishOption) *PublishOptions {

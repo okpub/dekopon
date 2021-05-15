@@ -10,13 +10,15 @@ import (
 func handlerMessage(ctx ActorContext) {
 	switch str := ctx.Message().(type) {
 	case *Stopped:
-		fmt.Println("关闭:", ctx.Background().Value("router"))
+		fmt.Println("关闭:", ctx.Self())
+	case int:
+		ctx.Respond("傻逼")
 	case string:
 		time.Sleep(time.Millisecond * 100)
 		if str == "shutdown" {
 			ctx.System().Shutdown()
 		} else if str == "child" {
-			var pid = ctx.ActorOf(From(handlerMessage).WithValue("router", "代替陆游"))
+			var pid = ctx.ActorOf(From(handlerMessage))
 			pid.Send("发送")
 			pid.Send("my self")
 			var err = pid.Send("我来发消息", SetTimeout(time.Millisecond*10))
@@ -29,21 +31,17 @@ func handlerMessage(ctx ActorContext) {
 
 func TestInit(t *testing.T) {
 	var (
-		ctx, cancel = context.WithCancel(context.Background())
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*2)
 		stage       = WithSystem(context.WithValue(ctx, "router", "路由器"))
 		pid         = stage.ActorOf(From(handlerMessage))
 	)
 	defer cancel()
 
 	pid.Send("child")
-
-	for i := 0; i < 10; i++ {
-		//fmt.Println(pid.Call("sync message"))
-		pid.Send("child")
-	}
-
+	var res, err = pid.Call(13)
+	fmt.Println(res, err)
 	pid.Send("shutdown")
 
 	stage.Wait()
-	time.Sleep(time.Second)
+	fmt.Println("最终推出")
 }

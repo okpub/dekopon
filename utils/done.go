@@ -1,6 +1,4 @@
-package actor
-
-import "github.com/okpub/dekopon/utils"
+package utils
 
 type TaskDone chan struct{}
 
@@ -12,7 +10,6 @@ func (done TaskDone) Done() <-chan struct{} {
 	return done
 }
 
-func (done TaskDone) Close() (err error) {
-	err = utils.SafeDone(done)
-	return
+func (done TaskDone) Shutdown() {
+	SafeDone(done)
 }

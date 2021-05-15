@@ -5,48 +5,47 @@ import (
 	"fmt"
 
 	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/utils"
 )
 
 const (
-	DefaultServerAddr = ":8999"
-	DefaultMaxConn    = 1000
+	defaultServerAddr = ":8999"
+	defaultMaxConn    = 1000
 )
 
-func NewServerOptions(args ...ServerOption) *ServerOptions {
+func NewServer(args ...ServerOption) Server {
 	var options = ServerOptions{
-		MaxConn: DefaultMaxConn,
-		Addr:    DefaultServerAddr,
+		Context: context.Background(),
+		MaxConn: defaultMaxConn,
+		Addr:    defaultServerAddr,
 		Network: TCP,
 	}
-	return options.Filler(args)
-}
-
-func NewServer(args ...ServerOption) Server {
-	return WithServer(NewServerOptions(args...))
+	return WithServer(options.Filler(args))
 }
 
 func WithServer(options *ServerOptions) Server {
 	switch options.Network {
 	case TCP:
-		return &TcpServer{ServerOptions: options, TaskDone: actor.MakeDone()}
+		return &TcpServer{ServerOptions: options, TaskDone: utils.MakeDone()}
 	case WEB:
-		return &WebServer{ServerOptions: options, TaskDone: actor.MakeDone()}
+		return &WebServer{ServerOptions: options, TaskDone: utils.MakeDone()}
 	default:
 		panic(fmt.Errorf("can't open server untype: %s", options.Network))
 	}
 }
 
-func FromServer(ctx context.Context, handler Handler, args ...ServerOption) actor.PID {
+func FromServer(handler Handler, args ...ServerOption) actor.PID {
 	var (
-		options       = NewServerOptions(args...)
-		child, cancel = context.WithCancel(ctx)
-		ref           = NewServerProcess(options, handler)
-		pid           = actor.NewPID(child, ref, actor.SetAddr(options.Addr))
+		done   = utils.MakeDone()
+		server = NewServer(args...)
+		ref    = NewServerProcess(done, server)
+		pid    = actor.NewPID(ref, actor.SetName(server.Options().Addr))
 	)
 
 	go func() {
-		defer cancel()
+		defer done.Shutdown()
 		ref.PostSystemMessage(pid, actor.EVENT_START)
+		server.ListenAndServe(server.Options().Context, handler)
 		ref.PostSystemMessage(pid, actor.EVENT_STOP)
 	}()
 

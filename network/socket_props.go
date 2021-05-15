@@ -1,10 +1,10 @@
 package network
 
 import (
-	"context"
 	"net"
 
 	"github.com/okpub/dekopon/actor"
+	"github.com/okpub/dekopon/utils"
 )
 
 func SetContextMiddleware(conn net.Conn) actor.ContextDecorator {
@@ -19,15 +19,19 @@ func fromConn(conn net.Conn, method actor.ActorFunc) *actor.Props {
 	return actor.From(method).WithContextDecorator(SetContextMiddleware(conn))
 }
 
-func SpawnConn(ctx context.Context, conn net.Conn, method actor.ActorFunc, args ...SocketOption) actor.PID {
+func SpawnConn(conn net.Conn, method actor.ActorFunc, args ...SocketOption) {
 	var (
+		done   = utils.MakeDone()
 		socket = WithSocket(conn, args...)
-		pid    = actor.NewPID(ctx, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
+		pid    = actor.NewPID(actor.NewDfaultProcess(done.Done(), socket), actor.SetName(socket.Addr))
 		props  = fromConn(conn, method)
 	)
-	socket.RegisterHander(actor.NewSelf(pid, props))
-	socket.ServeConn(ctx, conn)
-	return pid
+	defer done.Shutdown()
+	socket.RegisterHander(actor.NewSelf(pid, props), props.GetDispatcher())
+	socket.InvokeSystemMessage(actor.EVENT_START)
+	socket.ServeConn(conn)
+	socket.InvokeSystemMessage(EVENT_CLOSED)
+	socket.InvokeSystemMessage(actor.EVENT_STOP)
 }
 
 func FromDial(args ...SocketOption) *actor.Props {
@@ -35,19 +39,22 @@ func FromDial(args ...SocketOption) *actor.Props {
 }
 
 func wrapAddrSpawner(args ...SocketOption) actor.SpawnFunc {
-	return func(parent actor.SpawnContext, props *actor.Props, options *actor.PIDOptions) actor.PID {
+	return func(parent actor.SpawnContext, props *actor.Props, options *actor.ActorOptions) actor.PID {
 		var (
-			child, cancel = props.WithCancel(parent.Background())
-			socket        = NewSocket(args...)
-			pid           = actor.NewPID(child, actor.NewProcess(socket), actor.SetAddr(socket.Addr))
-			ctx           = actor.NewContext(parent.ChildOf(pid), props)
+			done   = utils.MakeDone()
+			socket = NewSocket(args...)
+			pid    = actor.NewPID(actor.NewDfaultProcess(done.Done(), socket), actor.SetName(socket.Addr))
+			ctx    = actor.NewContext(parent.ChildOf(pid), props)
 		)
 
-		socket.RegisterHander(ctx)
-		//props可以不融入conn (只是为了设置读取超时)
+		socket.RegisterHander(ctx, props.GetDispatcher())
+
 		go func() {
-			defer cancel()
-			socket.Start(child)
+			defer done.Shutdown()
+			socket.InvokeSystemMessage(actor.EVENT_START)
+			socket.Start()
+			socket.InvokeSystemMessage(EVENT_CLOSED)
+			socket.InvokeSystemMessage(actor.EVENT_STOP)
 		}()
 
 		return pid

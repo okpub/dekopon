@@ -1,10 +1,13 @@
 package actor
 
 func (ctx *actorContext) Received(env MessageEnvelope) {
-	ctx.messageOrEnvelope = env
-	ctx.defaultReceive()
-	ctx.handleRequest(env.Message())
-	ctx.messageOrEnvelope = nil
+	if request, ok := env.Message().(Request); ok {
+		ctx.defaultRequestReceive(request)
+	} else {
+		ctx.messageOrEnvelope = env
+		ctx.defaultReceive()
+		ctx.messageOrEnvelope = nil
+	}
 }
 
 //private
@@ -20,8 +23,11 @@ func (ctx *actorContext) defaultReceive() {
 	ctx.actor.Received(ctx.getExtras().context)
 }
 
-func (*actorContext) handleRequest(message interface{}) {
-	if req, ok := message.(Request); ok {
-		req.Done()
-	}
+//处理同步消息
+func (ctx *actorContext) defaultRequestReceive(request Request) {
+	var sender = SyncPID(request)
+	ctx.messageOrEnvelope = WrapMessage(request.Message(), sender)
+	ctx.defaultReceive()
+	sender.Close()
+	ctx.messageOrEnvelope = nil
 }

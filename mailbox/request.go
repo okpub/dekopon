@@ -24,7 +24,7 @@ type mailboxRequest struct {
 }
 
 //支持actor
-func (req *mailboxRequest) Done() { req.Respond(TempErr) }
+func (req *mailboxRequest) Done() { req.Respond(utils.TempErr) }
 
 //request
 func (req *mailboxRequest) Message() interface{} { return req.request }

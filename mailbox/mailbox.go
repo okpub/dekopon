@@ -2,20 +2,20 @@ package mailbox
 
 import (
 	"context"
-)
 
-func Fail(err error) bool {
-	return err != nil
-}
+	"github.com/okpub/dekopon/utils"
+)
 
 type Producer func() Mailbox
 
 type Mailbox interface {
-	Start(context.Context) error
-	RegisterHander(InvokerMessage)
+	Start()
+	RegisterHander(InvokerMessage, Dispatcher)
+
 	CallUserMessage(context.Context, interface{}) (interface{}, error)
 	PostUserMessage(context.Context, interface{}) error
 	PostSystemMessage(interface{}) error
+
 	Close() error
 }
 
@@ -25,12 +25,45 @@ type InvokerMessage interface {
 	EscalateFailure(error, interface{})
 }
 
-type MessageRespond interface {
-	Body(context.Context) (interface{}, error)
+//默认邮箱
+type defaultMailbox struct {
+	taskMailbox utils.TaskBuffer
+
+	invoker    InvokerMessage
+	dispatcher Dispatcher
 }
 
-type MessageRequest interface {
-	Message() interface{}      //请求消息
-	Respond(interface{}) error //主动回答
-	Done()
+func (box *defaultMailbox) Start() {
+	var (
+		readChan = box.taskMailbox.Recv()
+	)
+	for message := range readChan {
+		box.invoker.InvokeUserMessage(message)
+	}
+}
+
+func (box *defaultMailbox) RegisterHander(invoker InvokerMessage, dispatcher Dispatcher) {
+	box.invoker = invoker
+	box.dispatcher = dispatcher
+}
+
+func (box *defaultMailbox) PostSystemMessage(message interface{}) error {
+	return box.taskMailbox.Send(message)
+}
+
+func (box *defaultMailbox) PostUserMessage(ctx context.Context, message interface{}) (err error) {
+	err = box.taskMailbox.SendCtx(ctx, message)
+	return
+}
+
+func (box *defaultMailbox) CallUserMessage(ctx context.Context, message interface{}) (interface{}, error) {
+	var request = NewRequest(message)
+	if err := box.PostUserMessage(ctx, request); utils.Die(err) {
+		request.Respond(err)
+	}
+	return request.Body(ctx)
+}
+
+func (box *defaultMailbox) Close() error {
+	return box.taskMailbox.Close()
 }

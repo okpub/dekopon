@@ -1,29 +1,30 @@
 package actor
 
 import (
-	"context"
-
 	"github.com/okpub/dekopon/mailbox"
+	"github.com/okpub/dekopon/utils"
 )
 
-const defaultPendingNum = 20
-
 var (
-	defaultMailboxProducer = NewMailbox
-	defaultSpawner         = func(parent SpawnContext, props *Props, options *PIDOptions) PID {
+	defaultMailboxProducer = mailbox.Unbounded()
+	defaultDispatcher      = mailbox.NewDefaultDispatcher()
+	defaultSpawner         = func(parent SpawnContext, props *Props, options *ActorOptions) PID {
 		var (
-			child, cancel = props.WithCancel(parent.Background())
-			box           = props.NewMailbox()
-			pid           = NewPIDWithOptions(child, NewProcess(box), options)
-			ctx           = NewContext(parent.ChildOf(pid), props)
+			done    = utils.MakeDone()
+			mbox    = props.NewMailbox()
+			pid     = WithPID(NewDfaultProcess(done.Done(), mbox), options)
+			invoker = NewContext(parent.ChildOf(pid), props)
 		)
 
-		box.RegisterHander(ctx)
+		mbox.RegisterHander(invoker, props.GetDispatcher())
 
 		go func() {
-			defer cancel()
-			box.Start(child)
+			defer done.Shutdown()
+			invoker.InvokeSystemMessage(EVENT_START)
+			mbox.Start()
+			invoker.InvokeSystemMessage(EVENT_STOP)
 		}()
+
 		return pid
 	}
 )
@@ -34,17 +35,16 @@ type Props struct {
 	spawner         SpawnFunc
 	mailboxProducer mailbox.Producer
 
-	//value
-	valueMiddleware      []ValueMiddleware
-	valueMiddlewareChain ValueFunc
+	dispatcher mailbox.Dispatcher
+	//spawn
+	spawnMiddleware      []SpawnMiddleware
+	spawnMiddlewareChain SpawnFunc
 
 	//middkeware
 	receiverMiddleware      []ReceiverMiddleware
 	receiverMiddlewareChain ReceiverFunc
 	senderMiddleware        []SenderMiddleware
 	senderMiddlewareChain   SenderFunc
-	spawnMiddleware         []SpawnMiddleware
-	spawnMiddlewareChain    SpawnFunc
 	contextDecorator        []ContextDecorator
 	contextDecoratorChain   ContextDecoratorFunc
 }
@@ -54,7 +54,17 @@ func (props *Props) NewActor() Actor {
 }
 
 func (props *Props) NewMailbox() mailbox.Mailbox {
+	if props.mailboxProducer == nil {
+		return defaultMailboxProducer()
+	}
 	return props.mailboxProducer()
+}
+
+func (props *Props) GetDispatcher() mailbox.Dispatcher {
+	if props.dispatcher == nil {
+		return defaultDispatcher
+	}
+	return props.dispatcher
 }
 
 func (props Props) Options() Props {
@@ -62,19 +72,14 @@ func (props Props) Options() Props {
 }
 
 //context apply
-func (props *Props) spawn(parent SpawnContext, options *PIDOptions) (pid PID) {
+func (props *Props) spawn(parent SpawnContext, options *ActorOptions) (pid PID) {
 	if chain := props.spawnMiddlewareChain; chain != nil {
 		return chain(parent, props, options)
 	}
-	return props.spawner(parent, props, options)
-}
-
-func (props *Props) WithCancel(parent context.Context) (context.Context, context.CancelFunc) {
-	var ctx = parent
-	if chain := props.valueMiddlewareChain; chain != nil {
-		ctx = chain(parent)
+	if props.spawner == nil {
+		return defaultSpawner(parent, props, options)
 	}
-	return context.WithCancel(ctx)
+	return props.spawner(parent, props, options)
 }
 
 //api with
@@ -99,8 +104,6 @@ func From(p ActorFunc) *Props {
 
 func FromProducer(producer Producer) *Props {
 	return &Props{
-		producer:        producer,
-		spawner:         defaultSpawner,
-		mailboxProducer: defaultMailboxProducer,
+		producer: producer,
 	}
 }

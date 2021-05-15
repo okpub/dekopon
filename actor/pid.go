@@ -8,8 +8,7 @@ import (
 
 type PID interface {
 	//data
-	Options() PIDOptions
-	Background() context.Context
+	Options() ActorOptions
 
 	//private send
 	sendSystemMessage(interface{}) error
@@ -27,17 +26,16 @@ type PID interface {
 
 //class pid
 type actorRef struct {
-	*PIDOptions
-	ctx context.Context
+	*ActorOptions
 	ref ActorProcess
 }
 
-func NewPIDWithOptions(ctx context.Context, ref ActorProcess, opts *PIDOptions) PID {
-	return &actorRef{ctx: ctx, ref: ref, PIDOptions: opts}
+func WithPID(ref ActorProcess, opts *ActorOptions) PID {
+	return &actorRef{ref: ref, ActorOptions: opts}
 }
 
-func NewPID(ctx context.Context, ref ActorProcess, args ...PIDOption) PID {
-	return NewPIDWithOptions(ctx, ref, NewOptions(args))
+func NewPID(ref ActorProcess, args ...ActorOption) PID {
+	return WithPID(ref, NewOptions(args))
 }
 
 //private
@@ -51,38 +49,30 @@ func (pid *actorRef) sendUserMessage(ctx context.Context, message interface{}) e
 
 //public
 func (pid *actorRef) Call(message interface{}, args ...PublishOption) (interface{}, error) {
-	var options = NewPublish(message)
-	options.Filler(args)
+	var options = NewPublish(message, args...)
 	return pid.ref.CallUserMessage(options.Context, pid, options.Message)
 }
 
 func (pid *actorRef) Send(message interface{}, args ...PublishOption) (err error) {
-	var options = NewPublish(message)
-	options.Filler(args)
+	var options = NewPublish(message, args...)
 	err = pid.sendUserMessage(options.Context, options.Message)
 	return
 }
 
 func (pid *actorRef) Request(message interface{}, sender PID, args ...PublishOption) (err error) {
-	var options = NewPublish(message)
-	options.Filler(args)
-	err = pid.sendUserMessage(options.Context, REQ(options.Message, sender))
+	var options = NewPublish(message, args...)
+	err = pid.sendUserMessage(options.Context, WrapMessage(options.Message, sender))
 	return
 }
 
 //stop
 func (pid *actorRef) Close() (err error) {
-	err = pid.ref.PostStop(pid)
+	_, err = pid.ref.PostStop(pid)
 	return
 }
 
-func (pid *actorRef) GracefulStop() (err error) {
-	err = pid.ref.PostStop(pid)
-	utils.Wait(pid.Background())
-	return
-}
-
-//info
-func (pid *actorRef) Background() context.Context {
-	return pid.ctx
+func (pid *actorRef) GracefulStop() error {
+	var done, err = pid.ref.PostStop(pid)
+	utils.WaitDone(done)
+	return err
 }

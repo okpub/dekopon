@@ -11,7 +11,7 @@ func OnceTimer(pid PID, d time.Duration, fn func()) (cancel context.CancelFunc) 
 		timer = time.NewTimer(d)
 	)
 
-	child, cancel = context.WithCancel(pid.Background())
+	child, cancel = context.WithCancel(context.Background())
 
 	var method = func() {
 		select {
@@ -45,7 +45,7 @@ func LoopTimer(pid PID, d time.Duration, fn func()) (cancel context.CancelFunc) 
 		timer = time.NewTicker(d)
 	)
 
-	child, cancel = context.WithCancel(pid.Background())
+	child, cancel = context.WithCancel(context.Background())
 	var method = func() {
 		select {
 		case <-child.Done():

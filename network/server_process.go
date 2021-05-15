@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
@@ -10,14 +9,15 @@ import (
 
 type ServerProcess struct {
 	actor.UntypeProcess
-	server  Server
-	handler Handler
+	server Server
+	done   <-chan struct{}
+
 	mu      sync.Mutex
 	wathers actor.PIDSet
 }
 
-func NewServerProcess(options *ServerOptions, handler Handler) actor.ActorProcess {
-	return &ServerProcess{server: WithServer(options), handler: handler, wathers: make(actor.PIDSet)}
+func NewServerProcess(done <-chan struct{}, server Server) actor.ActorProcess {
+	return &ServerProcess{server: server, done: done, wathers: make(actor.PIDSet)}
 }
 
 func (p *ServerProcess) PostSystemMessage(pid actor.PID, message interface{}) (err error) {
@@ -27,19 +27,17 @@ func (p *ServerProcess) PostSystemMessage(pid actor.PID, message interface{}) (e
 	case *actor.Unwatch:
 		p.handleUnwatch(event)
 	case *actor.Started:
-		p.handleStart()
+		p.handleStart(pid)
 	case *actor.Stopped:
 		p.handleStop(pid)
-	case *actor.Restarting:
-		//not todo
 	default:
 		fmt.Println("Miss system-message:", message)
 	}
 	return
 }
 
-func (p *ServerProcess) PostStop(pid actor.PID) (err error) {
-	p.server.Close()
+func (p *ServerProcess) PostStop(pid actor.PID) (done <-chan struct{}, err error) {
+	done, err = p.done, p.server.Close()
 	return
 }
 
@@ -56,8 +54,8 @@ func (p *ServerProcess) handleUnwatch(event *actor.Unwatch) {
 	p.mu.Unlock()
 }
 
-func (p *ServerProcess) handleStart() {
-	p.server.ListenAndServe(context.Background(), p.handler)
+func (p *ServerProcess) handleStart(pid actor.PID) {
+	//p.server.ListenAndServe(pid.Options().Context, p.handler)
 }
 
 func (p *ServerProcess) handleStop(self actor.PID) {

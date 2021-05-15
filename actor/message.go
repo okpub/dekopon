@@ -1,22 +1,24 @@
 package actor
 
+//class
 type ActorMessage struct {
 	sender  PID
 	message interface{}
 }
 
+func (env *ActorMessage) Sender() PID          { return env.sender }
+func (env *ActorMessage) Message() interface{} { return env.message }
+
+//static message func
 func MSG(message interface{}) MessageEnvelope {
-	return REQ(message, nil)
+	return WrapMessage(message, nil)
 }
 
-func REQ(message interface{}, pid PID) MessageEnvelope {
+func WrapMessage(message interface{}, pid PID) MessageEnvelope {
 	return &ActorMessage{message: message, sender: pid}
 }
 
-func (this *ActorMessage) Sender() PID          { return this.sender }
-func (this *ActorMessage) Message() interface{} { return this.message }
-
-//static func
+//static envelope func
 func WrapEnvelope(any interface{}) MessageEnvelope {
 	if message, ok := any.(MessageEnvelope); ok {
 		return message

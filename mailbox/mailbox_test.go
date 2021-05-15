@@ -8,7 +8,7 @@ import (
 )
 
 func handlerMessage(message interface{}) {
-	if request, ok := message.(MessageRequest); ok {
+	if request, ok := message.(*mailboxRequest); ok {
 		defer request.Done()
 		request.Respond("没有消费")
 	} else {
@@ -18,22 +18,17 @@ func handlerMessage(message interface{}) {
 
 func TestInit(t *testing.T) {
 	var (
-		ctx, cancel = context.WithCancel(context.Background())
-		buff        = MakeBuffer(10)
+		buff = NewMailbox()
 	)
 
-	go func() {
-		defer cancel()
-		for message := range buff {
-			handlerMessage(message)
-		}
-	}()
+	buff.RegisterHander(InvokerFunc(handlerMessage), NewDefaultDispatcher())
+	go buff.Start()
 
-	buff.Send("为啥")
-	var resp, err = buff.CallUserMessage(ctx, "我是会")
+	buff.PostSystemMessage("start")
+	buff.PostUserMessage(context.Background(), "为啥")
+	var resp, err = buff.CallUserMessage(context.Background(), "我是会")
 	fmt.Println(resp, err)
 
 	time.Sleep(time.Second)
 	buff.Close()
-	<-ctx.Done()
 }

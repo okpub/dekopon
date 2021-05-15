@@ -3,8 +3,9 @@ package utils
 import "fmt"
 
 var (
-	EOF    = fmt.Errorf("ERROR: buffer closed")
-	NilErr = fmt.Errorf("ERROR: null value")
+	EOF     = fmt.Errorf("ERROR: buffer closed")
+	NilErr  = fmt.Errorf("ERROR: null value")
+	TempErr = &PublishErr{}
 )
 
 func Die(err error) bool {
@@ -44,3 +45,11 @@ func SafeDone(done chan<- struct{}) (err error) {
 	close(done)
 	return
 }
+
+//临时错误
+type PublishErr struct{}
+
+func (*PublishErr) Error() string   { return "PublishErr" }
+func (*PublishErr) String() string  { return "PublishErr" }
+func (*PublishErr) Timeout() bool   { return true }
+func (*PublishErr) Temporary() bool { return true }

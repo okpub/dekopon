@@ -12,12 +12,13 @@ import (
 	"github.com/okpub/dekopon/conn/packet"
 	"github.com/okpub/dekopon/mailbox"
 	"github.com/okpub/dekopon/network"
+	"github.com/okpub/dekopon/utils"
 )
 
 //同步应答客户端
 type Client struct {
 	*network.SocketOptions
-	mailbox.TaskBuffer
+	utils.TaskBuffer
 	packetChan chan *packet.Packet
 }
 
@@ -41,16 +42,16 @@ func (client *Client) Serve(ctx context.Context) {
 	defer cancel()
 	if err == nil {
 		go func() {
-			client.ListenAndWrite(child, conn)
+			client.listenAndWrite(child, conn)
 		}()
 
-		client.ListenAndRead(conn)
+		client.listenAndRead(conn)
 	} else {
 		client.Close()
 	}
 }
 
-func (client *Client) ListenAndWrite(ctx context.Context, conn net.Conn) {
+func (client *Client) listenAndWrite(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
 	var (
 		sendCh        = client.TaskBuffer
@@ -80,7 +81,7 @@ func (client *Client) ListenAndWrite(ctx context.Context, conn net.Conn) {
 	}
 }
 
-func (client *Client) ListenAndRead(conn net.Conn) (err error) {
+func (client *Client) listenAndRead(conn net.Conn) (err error) {
 	var (
 		sendChan = client.TaskBuffer
 		buf      = bytes.NewBuffer(nil)
@@ -104,10 +105,12 @@ func (client *Client) Request(req *rpc.Request) (*rpc.Response, error) {
 	return client.RequestCtx(context.Background(), req)
 }
 
-func (client *Client) RequestCtx(ctx context.Context, req *rpc.Request) (res *rpc.Response, err error) {
-	var data interface{}
-	if data, err = client.CallUserMessage(ctx, req); err == nil {
-		res, err = message.UnpackRes(data)
+func (client *Client) RequestCtx(ctx context.Context, data *rpc.Request) (res *rpc.Response, err error) {
+	var request = mailbox.NewRequest(data)
+	if err = client.SendCtx(ctx, request); utils.Die(err) {
+		request.Respond(err)
+	} else {
+		res, err = message.UnpackRes(request.Body(ctx))
 	}
 	return
 }

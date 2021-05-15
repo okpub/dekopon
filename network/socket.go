@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -10,13 +11,14 @@ import (
 	"github.com/okpub/dekopon/conn/codec"
 	"github.com/okpub/dekopon/conn/packet"
 	"github.com/okpub/dekopon/mailbox"
+	"github.com/okpub/dekopon/utils"
 )
 
 /*
  * 问答socket
  */
 type Socket struct {
-	mailbox.TaskBuffer
+	utils.TaskBuffer
 	mailbox.InvokerMessage
 	*SocketOptions
 }
@@ -35,46 +37,31 @@ func WithSocket(conn net.Conn, args ...SocketOption) *Socket {
 	return socket
 }
 
-func (socket *Socket) RegisterHander(invoker mailbox.InvokerMessage) {
+func (socket *Socket) RegisterHander(invoker mailbox.InvokerMessage, distacher mailbox.Dispatcher) {
 	socket.InvokerMessage = invoker
 }
 
 //不需要连接
-func (socket *Socket) ServeConn(ctx context.Context, conn net.Conn) (err error) {
-	defer socket.InvokeSystemMessage(actor.EVENT_STOP)
-	defer socket.InvokeSystemMessage(EVENT_CLOSED)
-
-	socket.InvokeSystemMessage(actor.EVENT_START)
-	err = socket.run(ctx, conn)
-	return
-}
-
-//override public
-func (socket *Socket) Start(ctx context.Context) error {
-	var (
-		conn, err = socket.Connect()
-	)
-
-	defer socket.InvokeSystemMessage(actor.EVENT_STOP)
-	defer socket.InvokeSystemMessage(EVENT_CLOSED)
-
-	socket.InvokeSystemMessage(actor.EVENT_START)
-	if err == nil {
-		err = socket.run(ctx, conn)
-	} else {
-		socket.InvokeSystemMessage(&DialError{Err: err})
-		socket.Close()
-	}
-	return err
-}
-
-func (socket *Socket) run(ctx context.Context, conn net.Conn) (err error) {
+func (socket *Socket) ServeConn(conn net.Conn) (err error) {
 	socket.InvokeSystemMessage(EVENT_OPEN)
 	//异步写入
 	go socket.ListenAndWrite(conn)
 	//同步读取
-	socket.ListenAndRead(conn)
+	err = socket.ListenAndRead(conn)
 	return
+}
+
+//override public
+func (socket *Socket) Start() {
+	var (
+		conn, err = socket.Connect()
+	)
+	if err == nil {
+		socket.ServeConn(conn)
+	} else {
+		socket.InvokeSystemMessage(&DialError{Err: err})
+		socket.Close()
+	}
 }
 
 /*
@@ -82,11 +69,11 @@ func (socket *Socket) run(ctx context.Context, conn net.Conn) (err error) {
  */
 func (socket *Socket) ListenAndWrite(conn net.Conn) (err error) {
 	var (
-		sendCh = socket.TaskBuffer
-		body   []byte
+		sendChan = socket.TaskBuffer
+		body     []byte
 	)
 	defer conn.Close()
-	for message := range sendCh {
+	for message := range sendChan {
 		if body, err = socket.Encoder.Encode(actor.GetMessage(message)); err == nil {
 			_, err = conn.Write(body)
 		}
@@ -99,11 +86,11 @@ func (socket *Socket) ListenAndWrite(conn net.Conn) (err error) {
  */
 func (socket *Socket) ListenAndRead(conn net.Conn) (err error) {
 	var (
-		sendCh  = socket.TaskBuffer
-		buf     = bytes.NewBuffer(nil)
-		packets []*packet.Packet
+		sendChan = socket.TaskBuffer
+		buf      = bytes.NewBuffer(nil)
+		packets  []*packet.Packet
 	)
-	defer sendCh.Close()
+	defer sendChan.Close()
 	for {
 		if packets, err = ReadPackets(buf, conn, socket.Decoder); err == nil {
 			for _, message := range packets {
@@ -142,4 +129,17 @@ func ReadPackets(buf *bytes.Buffer, conn net.Conn, decoder codec.PacketDecoder) 
 		fmt.Println(err.Error())
 	}
 	return
+}
+
+//mailbox
+func (socket *Socket) CallUserMessage(ctx context.Context, message interface{}) (res interface{}, err error) {
+	panic(errors.New("不支持"))
+}
+
+func (socket *Socket) PostUserMessage(ctx context.Context, message interface{}) error {
+	return socket.TaskBuffer.SendCtx(ctx, message)
+}
+
+func (socket *Socket) PostSystemMessage(message interface{}) error {
+	panic(errors.New("不支持"))
 }

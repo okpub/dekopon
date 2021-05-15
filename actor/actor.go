@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"context"
 	"time"
 )
 
@@ -41,42 +40,45 @@ type (
 		recvPart
 		sendPart
 		stopPart
+		messagePart
 	}
 
 	ReceiverContext interface {
-		sendPart
+		infoPart
 		recvPart
+		messagePart
 	}
 
 	SenderContext interface {
+		infoPart
 		sendPart
+		messagePart
 	}
 )
 
 //part
 type (
-	NodePart interface {
-		ChildOf(PID) infoPart
-	}
-
 	infoPart interface {
-		NodePart
+		ChildOf(PID) infoPart
 		Self() PID
 		Parent() PID
 		System() ActorSystem
 	}
 
+	messagePart interface {
+		Message() interface{}
+	}
+
 	spawnPart interface {
-		ActorOf(*Props, ...PIDOption) PID
-		Background() context.Context
+		ActorOf(*Props, ...ActorOption) PID
 	}
 
 	recvPart interface {
-		MessageEnvelope
 		Received(MessageEnvelope)
 	}
 
 	sendPart interface {
+		Sender() PID
 		Send(PID, interface{}) error
 		RequestWithCustomSender(PID, interface{}, PID) error
 		//other
@@ -105,13 +107,13 @@ type (
 //message
 type (
 	MessageEnvelope interface {
+		messagePart
 		Sender() PID
-		Message() interface{}
 	}
 
 	Request interface {
+		messagePart
 		Done()
-		Message() interface{}
 		Respond(interface{}) error
 	}
 )

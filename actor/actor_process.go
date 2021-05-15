@@ -14,31 +14,34 @@ type ActorProcess interface {
 	CallUserMessage(context.Context, PID, interface{}) (interface{}, error)
 	PostUserMessage(context.Context, PID, interface{}) error
 	PostSystemMessage(PID, interface{}) error
-	PostStop(PID) error
+	PostStop(PID) (<-chan struct{}, error)
 }
 
-type actorProcess struct {
+//默认
+type defaultProcess struct {
+	done    <-chan struct{}
 	mailbox mailbox.Mailbox
 }
 
-func NewProcess(mailbox mailbox.Mailbox) ActorProcess {
-	return &actorProcess{mailbox: mailbox}
+func NewDfaultProcess(done <-chan struct{}, mailbox mailbox.Mailbox) ActorProcess {
+	return &defaultProcess{done: done, mailbox: mailbox}
 }
 
-func (ref *actorProcess) CallUserMessage(ctx context.Context, pid PID, message interface{}) (interface{}, error) {
+func (ref *defaultProcess) CallUserMessage(ctx context.Context, pid PID, message interface{}) (interface{}, error) {
 	return ref.mailbox.CallUserMessage(ctx, message)
 }
 
-func (ref *actorProcess) PostUserMessage(ctx context.Context, pid PID, message interface{}) error {
+func (ref *defaultProcess) PostUserMessage(ctx context.Context, pid PID, message interface{}) error {
 	return ref.mailbox.PostUserMessage(ctx, message)
 }
 
-func (ref *actorProcess) PostSystemMessage(pid PID, message interface{}) error {
+func (ref *defaultProcess) PostSystemMessage(pid PID, message interface{}) error {
 	return ref.mailbox.PostSystemMessage(message)
 }
 
-func (ref *actorProcess) PostStop(pid PID) error {
-	return ref.mailbox.Close()
+func (ref *defaultProcess) PostStop(pid PID) (done <-chan struct{}, err error) {
+	done, err = ref.done, ref.mailbox.Close()
+	return
 }
 
 //未实现过程
@@ -56,6 +59,6 @@ func (*UntypeProcess) PostSystemMessage(pid PID, message interface{}) error {
 	panic(fmt.Errorf("[Class UntypeProcess] unrealized PostSystemMessage"))
 }
 
-func (*UntypeProcess) PostStop(pid PID) error {
+func (*UntypeProcess) PostStop(pid PID) (<-chan struct{}, error) {
 	panic(fmt.Errorf("[Class UntypeProcess] unrealized PostStop"))
 }

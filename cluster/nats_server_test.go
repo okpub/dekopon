@@ -53,7 +53,7 @@ func (a *TestActor) Received(ctx actor.ActorContext) {
 
 func (*TestActor) start(ctx actor.ActorContext) {
 	var svr = NewNatServer(ctx.Self(), network.SetAddr(":9090"))
-	svr.Start(ctx.Background())
+	svr.Start(context.Background())
 }
 
 func TestInit2(t *testing.T) {

@@ -13,15 +13,17 @@ var (
 	resErrString = "request err!"
 )
 
-func UnpackRes(data interface{}) (res *rpc.Response, err error) {
-	switch p := data.(type) {
-	case *packet.Packet:
-		res = &rpc.Response{}
-		err = proto.Unmarshal(p.Body, res)
-	case *rpc.Response:
-		res = p
-	default:
-		err = fmt.Errorf("the res can't unpack %T", data)
+func UnpackRes(data interface{}, failed error) (res *rpc.Response, err error) {
+	if err = failed; err == nil {
+		switch p := data.(type) {
+		case *packet.Packet:
+			res = &rpc.Response{}
+			err = proto.Unmarshal(p.Body, res)
+		case *rpc.Response:
+			res = p
+		default:
+			err = fmt.Errorf("the res can't unpack %T", data)
+		}
 	}
 	return
 }

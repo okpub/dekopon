@@ -1,8 +1,6 @@
 package actor
 
 import (
-	"context"
-	"fmt"
 	"time"
 )
 
@@ -71,12 +69,8 @@ func (ctx *actorContext) CancelReceiveTimeout() {
 }
 
 //swapn
-func (ctx *actorContext) ActorOf(props *Props, args ...PIDOption) PID {
+func (ctx *actorContext) ActorOf(props *Props, args ...ActorOption) PID {
 	return ctx.getExtras().addChild(props.spawn(ctx, NewOptions(args)))
-}
-
-func (ctx *actorContext) Background() context.Context {
-	return ctx.Self().Background()
 }
 
 //env
@@ -131,7 +125,7 @@ func (ctx *actorContext) fireParent(message interface{}) (err error) {
 	if parent := ctx.Parent(); nil != parent {
 		err = parent.sendSystemMessage(message)
 	} else {
-		err = fmt.Errorf("##GL fireParent: parent is nil!")
+		err = NilErr
 	}
 	return
 }
