@@ -35,7 +35,7 @@ type defaultMailbox struct {
 
 func (box *defaultMailbox) Start() {
 	var (
-		readChan = box.taskMailbox.Recv()
+		readChan = box.taskMailbox
 	)
 	for message := range readChan {
 		box.invoker.InvokeUserMessage(message)
@@ -48,12 +48,11 @@ func (box *defaultMailbox) RegisterHander(invoker InvokerMessage, dispatcher Dis
 }
 
 func (box *defaultMailbox) PostSystemMessage(message interface{}) error {
-	return box.taskMailbox.Send(message)
+	return utils.Send(box.taskMailbox, message)
 }
 
-func (box *defaultMailbox) PostUserMessage(ctx context.Context, message interface{}) (err error) {
-	err = box.taskMailbox.SendCtx(ctx, message)
-	return
+func (box *defaultMailbox) PostUserMessage(ctx context.Context, message interface{}) error {
+	return utils.SendCtx(box.taskMailbox, ctx, message)
 }
 
 func (box *defaultMailbox) CallUserMessage(ctx context.Context, message interface{}) (interface{}, error) {

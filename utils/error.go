@@ -3,9 +3,9 @@ package utils
 import "fmt"
 
 var (
-	EOF     = fmt.Errorf("ERROR: buffer closed")
-	NilErr  = fmt.Errorf("ERROR: null value")
-	TempErr = &PublishErr{}
+	EOF        = fmt.Errorf("ERROR: buffer closed")
+	NilErr     = fmt.Errorf("ERROR: null value")
+	TimeoutErr = &tempErr{}
 )
 
 func Die(err error) bool {
@@ -33,23 +33,10 @@ func CatchDie(obj interface{}) (err error) {
 	return
 }
 
-//close
-func SafeClose(task chan interface{}) (err error) {
-	defer func() { err = CatchDie(recover()) }()
-	close(task)
-	return
-}
-
-func SafeDone(done chan<- struct{}) (err error) {
-	defer func() { err = CatchDie(recover()) }()
-	close(done)
-	return
-}
-
 //临时错误
-type PublishErr struct{}
+type tempErr struct{}
 
-func (*PublishErr) Error() string   { return "PublishErr" }
-func (*PublishErr) String() string  { return "PublishErr" }
-func (*PublishErr) Timeout() bool   { return true }
-func (*PublishErr) Temporary() bool { return true }
+func (*tempErr) Error() string   { return "SendTempErr" }
+func (*tempErr) String() string  { return "SendTempErr" }
+func (*tempErr) Timeout() bool   { return true }
+func (*tempErr) Temporary() bool { return true }

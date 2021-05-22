@@ -34,6 +34,11 @@ func (client *Client) Start() {
 	go client.Serve(context.Background())
 }
 
+func (client *Client) Close() (err error) {
+	err = utils.SafeClose(client.TaskBuffer)
+	return
+}
+
 func (client *Client) Serve(ctx context.Context) {
 	var (
 		conn, err     = client.Connect()
@@ -83,11 +88,10 @@ func (client *Client) listenAndWrite(ctx context.Context, conn net.Conn) {
 
 func (client *Client) listenAndRead(conn net.Conn) (err error) {
 	var (
-		sendChan = client.TaskBuffer
-		buf      = bytes.NewBuffer(nil)
-		packets  []*packet.Packet
+		buf     = bytes.NewBuffer(nil)
+		packets []*packet.Packet
 	)
-	defer sendChan.Close()
+	defer utils.SafeClose(client.TaskBuffer)
 	for {
 		if packets, err = network.ReadPackets(buf, conn, client.Decoder); err == nil {
 			for _, message := range packets {
@@ -107,7 +111,7 @@ func (client *Client) Request(req *rpc.Request) (*rpc.Response, error) {
 
 func (client *Client) RequestCtx(ctx context.Context, data *rpc.Request) (res *rpc.Response, err error) {
 	var request = mailbox.NewRequest(data)
-	if err = client.SendCtx(ctx, request); utils.Die(err) {
+	if err = utils.SendCtx(client.TaskBuffer, ctx, request); utils.Die(err) {
 		request.Respond(err)
 	} else {
 		res, err = message.UnpackRes(request.Body(ctx))

@@ -43,7 +43,7 @@ func wrapAddrSpawner(args ...SocketOption) actor.SpawnFunc {
 		var (
 			done   = utils.MakeDone()
 			socket = NewSocket(args...)
-			pid    = actor.NewPID(actor.NewDfaultProcess(done.Done(), socket), actor.SetName(socket.Addr))
+			pid    = actor.WithPID(actor.NewDfaultProcess(done.Done(), socket), options.WithAddr(socket.Addr))
 			ctx    = actor.NewContext(parent.ChildOf(pid), props)
 		)
 

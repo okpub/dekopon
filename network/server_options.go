@@ -10,7 +10,7 @@ type ServerOptions struct {
 	MaxConn int
 }
 
-func (options ServerOptions) Options() ServerOptions { return options }
+func (options ServerOptions) Options() *ServerOptions { return &options }
 
 func (options *ServerOptions) Filler(args []ServerOption) *ServerOptions {
 	for _, f := range args {

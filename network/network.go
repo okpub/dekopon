@@ -20,7 +20,7 @@ const (
 )
 
 type Server interface {
-	Options() ServerOptions
+	Options() *ServerOptions
 	ListenAndServe(context.Context, Handler) error
 	Close() error
 }

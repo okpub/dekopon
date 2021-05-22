@@ -111,7 +111,6 @@ func (ctx *actorContext) InvokeSystemMessage(message interface{}) {
 	case *Unwatch:
 		ctx.handleUnwatch(event)
 	default:
-		//fmt.Println("##CTX WARN: Miss handle [class SystemMessage]:", event)
 		ctx.processMessage(message)
 	}
 }
@@ -128,4 +127,12 @@ func (ctx *actorContext) fireParent(message interface{}) (err error) {
 		err = NilErr
 	}
 	return
+}
+
+func (ctx *actorContext) processMessage(message interface{}) {
+	if chain := ctx.props.receiverMiddlewareChain; chain != nil {
+		chain(ctx.getExtras().context, WrapEnvelope(message))
+	} else {
+		ctx.getExtras().context.Received(WrapEnvelope(message))
+	}
 }

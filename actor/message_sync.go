@@ -19,6 +19,6 @@ func (ref *SyncMessageProcess) PostStop(pid PID) (done <-chan struct{}, err erro
 }
 
 //同步pid
-func SyncPID(request Request) PID {
-	return NewPID(&SyncMessageProcess{Request: request})
+func NewSync(request Request) PID {
+	return NewPID(&SyncMessageProcess{Request: request}, SetName("request"))
 }

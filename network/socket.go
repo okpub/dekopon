@@ -90,7 +90,7 @@ func (socket *Socket) ListenAndRead(conn net.Conn) (err error) {
 		buf      = bytes.NewBuffer(nil)
 		packets  []*packet.Packet
 	)
-	defer sendChan.Close()
+	defer utils.SafeClose(sendChan)
 	for {
 		if packets, err = ReadPackets(buf, conn, socket.Decoder); err == nil {
 			for _, message := range packets {
@@ -137,7 +137,7 @@ func (socket *Socket) CallUserMessage(ctx context.Context, message interface{}) 
 }
 
 func (socket *Socket) PostUserMessage(ctx context.Context, message interface{}) error {
-	return socket.TaskBuffer.SendCtx(ctx, message)
+	return utils.SendCtx(socket.TaskBuffer, ctx, message)
 }
 
 func (socket *Socket) PostSystemMessage(message interface{}) error {

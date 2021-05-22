@@ -47,16 +47,17 @@ func (server *TcpServer) ListenAndServe(ctx context.Context, handler Handler) (e
 	)
 
 	go func() {
-		defer ln.Close()
 		select {
 		case <-server.Done():
+			cancel()
 		case <-child.Done():
+			ln.Close()
 		}
 	}()
 
 	func() {
 		var conn net.Conn
-		defer cancel()
+		defer server.Close()
 		defer conns.CloseAll()
 		for {
 			if conn, err = ln.Accept(); err == nil {

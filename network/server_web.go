@@ -40,12 +40,14 @@ func (server *WebServer) ListenAndServe(ctx context.Context, handler Handler) (e
 		defer ln.Shutdown(child)
 		select {
 		case <-server.Done():
+			cancel()
 		case <-child.Done():
+			//todo
 		}
 	}()
 
 	func() {
-		defer cancel()
+		defer server.Close()
 		defer conns.CloseAll()
 		err = ln.ListenAndServe()
 		fmt.Println("EXIT: close web server#", err)

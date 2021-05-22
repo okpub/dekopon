@@ -6,7 +6,7 @@ import (
 
 type ActorOptions struct {
 	//context.Context
-	ID   int
+	ID   int32
 	Name string
 	Addr string
 }
@@ -18,10 +18,30 @@ func NewOptions(args []ActorOption) *ActorOptions {
 	return options.Filler(args)
 }
 
+func WithOptions(args ...ActorOption) *ActorOptions {
+	var options = defaultActorOptions.Options()
+	return options.Filler(args)
+}
+
 func (options *ActorOptions) Filler(args []ActorOption) *ActorOptions {
 	for _, f := range args {
 		f(options)
 	}
+	return options
+}
+
+func (options *ActorOptions) WithAddr(addr string) *ActorOptions {
+	options.Addr = addr
+	return options
+}
+
+func (options *ActorOptions) WithName(name string) *ActorOptions {
+	options.Name = name
+	return options
+}
+
+func (options *ActorOptions) WithId(id int32) *ActorOptions {
+	options.ID = id
 	return options
 }
 
@@ -36,7 +56,7 @@ func (options *ActorOptions) String() string {
 //可选参数
 type ActorOption func(*ActorOptions)
 
-func SetID(id int) ActorOption {
+func SetID(id int32) ActorOption {
 	return func(p *ActorOptions) {
 		p.ID = id
 	}

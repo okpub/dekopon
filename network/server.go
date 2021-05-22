@@ -39,7 +39,7 @@ func FromServer(handler Handler, args ...ServerOption) actor.PID {
 		done   = utils.MakeDone()
 		server = NewServer(args...)
 		ref    = NewServerProcess(done, server)
-		pid    = actor.NewPID(ref, actor.SetName(server.Options().Addr))
+		pid    = actor.WithPID(ref, actor.WithOptions().WithAddr(server.Options().Addr))
 	)
 
 	go func() {

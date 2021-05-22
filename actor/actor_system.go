@@ -32,11 +32,11 @@ func WithSystem(parent context.Context) ActorSystem {
 	)
 
 	go func() {
-		defer cancel()
 		select {
 		case <-ctx.Done():
 			exit.Shutdown()
 		case <-exit:
+			cancel()
 		}
 	}()
 

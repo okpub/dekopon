@@ -13,3 +13,9 @@ func (done TaskDone) Done() <-chan struct{} {
 func (done TaskDone) Shutdown() {
 	SafeDone(done)
 }
+
+func SafeDone(done chan<- struct{}) (err error) {
+	defer func() { err = CatchDie(recover()) }()
+	close(done)
+	return
+}

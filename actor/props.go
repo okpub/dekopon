@@ -34,8 +34,8 @@ type Props struct {
 	producer        Producer
 	spawner         SpawnFunc
 	mailboxProducer mailbox.Producer
+	dispatcher      mailbox.Dispatcher
 
-	dispatcher mailbox.Dispatcher
 	//spawn
 	spawnMiddleware      []SpawnMiddleware
 	spawnMiddlewareChain SpawnFunc

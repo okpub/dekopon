@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"time"
 )
 
 const (
@@ -24,18 +25,19 @@ func MakeTest() TaskBuffer {
 	return make(TaskBuffer, DefaultPendingNum)
 }
 
-func (ch TaskBuffer) Recv() <-chan interface{} {
-	return ch
+func (ch TaskBuffer) Close() error {
+	return SafeClose(ch)
 }
 
-func (ch TaskBuffer) Send(message interface{}) (err error) {
+//funcs
+func Send(ch chan<- interface{}, message interface{}) (err error) {
 	defer func() { err = CatchDie(recover()) }()
 	ch <- message
 	return
 }
 
 //当前堵塞立即返回
-func (ch TaskBuffer) SendTry(message interface{}) (err error) {
+func SendTry(ch chan<- interface{}, message interface{}) (err error) {
 	defer func() {
 		if err == nil {
 			err = CatchDie(recover())
@@ -46,12 +48,12 @@ func (ch TaskBuffer) SendTry(message interface{}) (err error) {
 	case ch <- message:
 		//send ok
 	default:
-		err = TempErr
+		err = TimeoutErr
 	}
 	return
 }
 
-func (ch TaskBuffer) SendCtx(ctx context.Context, message interface{}) (err error) {
+func SendCtx(ch chan<- interface{}, ctx context.Context, message interface{}) (err error) {
 	defer func() {
 		if err == nil {
 			err = CatchDie(recover())
@@ -68,7 +70,36 @@ func (ch TaskBuffer) SendCtx(ctx context.Context, message interface{}) (err erro
 	return
 }
 
-func (ch TaskBuffer) Close() (err error) {
-	err = SafeClose(ch)
+func SendTimeout(ch chan<- interface{}, message interface{}, dur time.Duration) (err error) {
+	defer func() {
+		if err == nil {
+			err = CatchDie(recover())
+		}
+	}()
+
+	switch {
+	case dur == Blocking:
+		ch <- message
+	case dur < Blocking:
+		select {
+		case ch <- message:
+			//send ok
+		default:
+			err = TimeoutErr
+		}
+	default:
+		select {
+		case ch <- message:
+			//send ok
+		case <-time.After(dur):
+			err = TimeoutErr
+		}
+	}
+	return
+}
+
+func SafeClose(task chan interface{}) (err error) {
+	defer func() { err = CatchDie(recover()) }()
+	close(task)
 	return
 }

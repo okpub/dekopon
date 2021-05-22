@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"net"
 	"time"
 
@@ -52,21 +51,8 @@ func (options *SocketOptions) Filler(args []SocketOption) *SocketOptions {
 	return options
 }
 
-func (options *SocketOptions) SetArgs(args ...SocketOption) *SocketOptions {
-	options.Filler(args)
-	return options
-}
-
-func (options *SocketOptions) Connect() (conn net.Conn, err error) {
-	switch options.Network {
-	case WEB:
-		conn, err = DialWeb(options.Addr)
-	case TCP:
-		conn, err = DialTcp(options.Addr)
-	default:
-		err = fmt.Errorf("can't dial network %s", options.Network)
-	}
-	return
+func (options *SocketOptions) Connect() (net.Conn, error) {
+	return Dial(options)
 }
 
 func (options *SocketOptions) WithAddr(addr string) *SocketOptions {
@@ -83,8 +69,8 @@ func (options *SocketOptions) NewChannel() utils.TaskBuffer {
 	return utils.MakeBuffer(options.PendingNum)
 }
 
-func (options SocketOptions) Options() SocketOptions {
-	return options
+func (options SocketOptions) Options() *SocketOptions {
+	return &options
 }
 
 //socket可选参数
