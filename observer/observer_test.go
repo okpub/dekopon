@@ -29,12 +29,10 @@ func TestObserver(t *testing.T) {
 	}
 
 	Register(user)
-	Router("User", "Signup", "abc", 123)
+	Emit("User.Signup", "abc", 123)
 
 	var b = NewObserver(user)
 
-	b.Call("Signin")
-
-	var obj, _ = GetValue(b.Call("Signup", "123", 432))
-	fmt.Println("返回值", obj)
+	var obj, err = GetValue(b.Call("Signin"))
+	fmt.Println("返回值", obj, err)
 }

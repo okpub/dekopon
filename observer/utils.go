@@ -1,8 +1,10 @@
 package observer
 
 import (
-	"errors"
 	"reflect"
+	"strings"
+
+	"github.com/okpub/dekopon/utils"
 )
 
 func getClassName(caller interface{}) string {
@@ -29,8 +31,16 @@ func GetValue(args []reflect.Value, die error) (res interface{}, err error) {
 		if len(args) > 0 {
 			res = args[0].Interface()
 		} else {
-			err = errors.New("empty args!")
+			err = utils.NilErr
 		}
 	}
 	return
+}
+
+func ToRouter(route string) (className string, methodName string) {
+	var arr = strings.Split(route, ".")
+	if len(arr) > 1 {
+		return arr[0], arr[1]
+	}
+	return arr[0], "Index"
 }

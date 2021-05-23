@@ -16,6 +16,10 @@ func NewObserver(caller interface{}) *Observer {
 	return &Observer{caller: reflect.ValueOf(caller), scheduler: reflect.TypeOf(caller), className: getClassName(caller)}
 }
 
+func (b *Observer) Name() string {
+	return b.className
+}
+
 func (b *Observer) Call(name string, args ...interface{}) (values []reflect.Value, err error) {
 	var req []reflect.Value
 	req = append(req, b.caller)
@@ -29,8 +33,4 @@ func (b *Observer) Call(name string, args ...interface{}) (values []reflect.Valu
 		err = fmt.Errorf("can't find class=%s method=%s", b.className, name)
 	}
 	return
-}
-
-func (b *Observer) Name() string {
-	return b.className
 }

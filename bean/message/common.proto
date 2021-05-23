@@ -26,7 +26,7 @@ message SessionHeader{
 	//登陆网关
 	int32 gate = 2;
 	//网关socket
-	int32 fid = 3;
+	int64 sid = 3;
 	//时间戳
 	int64 unix = 4;
 }

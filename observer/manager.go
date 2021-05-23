@@ -15,13 +15,13 @@ func NewManager() *Manager {
 	return &Manager{observers: make(ObserverSet)}
 }
 
-func (manager *Manager) Register(caller interface{}) (err error) {
+func (manager *Manager) On(caller interface{}) (err error) {
 	var observer = NewObserver(caller)
 	manager.observers[observer.Name()] = observer
 	return
 }
 
-func (manager *Manager) Unregister(className string) (err error) {
+func (manager *Manager) Off(className string) (err error) {
 	delete(manager.observers, className)
 	return
 }
@@ -35,20 +35,29 @@ func (manager *Manager) Router(className, method string, args ...interface{}) (v
 	return
 }
 
+func (manager *Manager) Emit(route string, args ...interface{}) ([]reflect.Value, error) {
+	var className, methodName = ToRouter(route)
+	return manager.Router(className, methodName, args...)
+}
+
 //全局默认管理
 var (
 	defaultManager = NewManager()
 )
 
 func Register(caller interface{}) {
-	defaultManager.Register(caller)
+	defaultManager.On(caller)
 }
 
-//不推荐
 func Unregister(className string) {
-	defaultManager.Unregister(className)
+	defaultManager.Off(className)
 }
 
 func Router(className, method string, args ...interface{}) (values []reflect.Value, err error) {
 	return defaultManager.Router(className, method, args...)
+}
+
+func Emit(route string, args ...interface{}) (values []reflect.Value, err error) {
+	var className, methodName = ToRouter(route)
+	return Router(className, methodName, args...)
 }
